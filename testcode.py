@@ -11,9 +11,9 @@ originalvidfolder = "C:\\Users\\hvrl\\Documents\\data\\KU\\videos"
 outputfolder = ".\\results"
 
 video_ids = [
-    '0838_0917_extract', 
-    # '2108_2112_extract', 
-    # '5909_5915_extract', 
+    # '0838_0917_extract', 
+    '2108_2112_extract', 
+    '5909_5915_extract', 
     # 'green0410_0452_extract'
 ]
 
@@ -42,9 +42,10 @@ for video_id in video_ids:
     for npyname in listof: 
         npy = np.load(npyname)
         flow = np.concatenate((npy, np.zeros((npy.shape[0], npy.shape[1], 1)) ), axis=2)
-        print(flow.shape)
+        # print(flow.shape)
         flowimg = flow_viz.flow_to_image(npy, convert_to_bgr=True)
-        cv.imshow('window', flowimg)
-        cv.waitKey(0) 
+        # cv.imshow('window', flowimg)
+        # cv.waitKey(0) 
+        output.write(flowimg)
 
     output.release()

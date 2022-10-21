@@ -33,27 +33,28 @@ for video_id in video_id_list:
 
     flowfiles = [os.path.join(video_flow_folder, f) for f in framenames]
 
-    # Read original videos for parameters of the writer 
-    origvidpath = os.path.join(video_masks_folder, video_id + ".mp4")
-    originalvideoreader = cv.VideoCapture(origvidpath)
-
-    # Define output video parameters 
-    outputname = "out_" + video_id + ".avi" 
-    print(outputname)
-    fourcc = cv.VideoWriter_fourcc(*'XVID')
-    fps = originalvideoreader.get(cv.CAP_PROP_FPS)
-    frame_width = int(originalvideoreader.get(cv.CAP_PROP_FRAME_WIDTH))
-    frame_height = int(originalvideoreader.get(cv.CAP_PROP_FRAME_HEIGHT))
-    originalvideoreader.release()
-
-    # Define output video writer 
-    output = cv.VideoWriter(os.path.join(outputfolder, outputname), fourcc, fps, (frame_width, frame_height))
-
     # Retrieve the optical flow of the first annotated frame 
     x, y = partdf["x_coord"].iloc[0], partdf["y_coord"].iloc[0]
     currentofname = os.path.join(video_flow_folder, partdf["video_frame_id"].iloc[0] + ".npy")
     currentflow = np.load(currentofname)
     apflow = currentflow[x, y]
+
+    # Read original videos for parameters of the writer 
+    origvidpath = os.path.join(video_folder, video_id + "_extract.mp4")
+    originalvideoreader = cv.VideoCapture(origvidpath)
+
+    # Define output video parameters 
+    outputname = "out_sense_" + video_id + ".mp4" 
+    print(outputname)
+    fourcc = cv.VideoWriter_fourcc(*'mp4v')
+    fps = originalvideoreader.get(cv.CAP_PROP_FPS)
+    frame_width = currentflow.shape[1]
+    frame_height = currentflow.shape[0]
+    print(origvidpath, fps)
+    originalvideoreader.release()
+
+    # Define output video writer 
+    output = cv.VideoWriter(os.path.join(outputfolder, outputname), fourcc, fps, (frame_width, frame_height))
     
     # Compare for each frame in the video the optical flow of the annotated flow to the one of the annotated point 
     currentframenb = partdf["frame_number"].iloc[0]
@@ -61,13 +62,15 @@ for video_id in video_id_list:
     inFrame = True 
     while currentframenb < len(framenames) and inFrame: 
         # Compare the "annotated" optical flow to all the other optical flow vectors 
-        compmat = np.ones(currentflow.shape)*apflow
-        compres = np.sum(compmat*currentflow, axis = 2)
-        # if len(framenames) - currentframenb < 5 : 
-        #     cv.imshow("output", compres)
-        #     cv.waitKey(0)
-        #     print(compres.shape)
-        output.write(compres)
+        compmat = np.ones(currentflow.shape, dtype = int)*apflow
+        compres = 255*np.sum(compmat*currentflow, axis = 2)+255
+        compres = compres.astype(np.float32) 
+        if currentframenb < 5 : 
+            cv.imshow("output", compres)
+            cv.waitKey(0)
+            print(compres.shape)
+            print(compres)
+        output.write(cv.cvtColor(compres, cv.COLOR_GRAY2BGR))
 
         # Determine the next optical flow vector of comparison
         currentframenb += 1

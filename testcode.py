@@ -15,7 +15,7 @@ D = np.array([
     ])
 E = np.ones((2,3,4), dtype = int)
 E[1] = E[1]*3
-result = np.sum(E, axis = 0)
+result = 10*np.sum(E, axis = 0)
 
 print(
     E, "\n", 

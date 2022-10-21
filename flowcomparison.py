@@ -5,11 +5,12 @@ import numpy as np
 import matplotlib.pyplot as plt 
 import cv2 as cv 
 
-video_flow_folder = "c:\\users\\hvrl\\Documents\\data\\KU\\of" 
+video_flow_folder = "C:\\Users\\hvrl\\Documents\\data\\KU\\of" 
 video_masks_folder = "C:\\Users\\hvrl\\Documents\\data\\KU\\masks"
 annotatedpoints = "C:\\Users\\hvrl\\Documents\\data\\KU\\centerpoints.csv"
+video_folder = "C:\\Users\\hvrl\\Documents\\data\\KU\\videos"
 
-resultsfolder = ".\\results"
+outputfolder = ".\\results"
 
 def reconstructFilenameFromList(name_elements): 
     filename = name_elements[0]
@@ -32,6 +33,22 @@ for video_id in video_id_list:
 
     flowfiles = [os.path.join(video_flow_folder, f) for f in framenames]
 
+    # Read original videos for parameters of the writer 
+    origvidpath = os.path.join(video_masks_folder, video_id + ".mp4")
+    originalvideoreader = cv.VideoCapture(origvidpath)
+
+    # Define output video parameters 
+    outputname = "out_" + video_id + ".avi" 
+    print(outputname)
+    fourcc = cv.VideoWriter_fourcc(*'XVID')
+    fps = originalvideoreader.get(cv.CAP_PROP_FPS)
+    frame_width = int(originalvideoreader.get(cv.CAP_PROP_FRAME_WIDTH))
+    frame_height = int(originalvideoreader.get(cv.CAP_PROP_FRAME_HEIGHT))
+    originalvideoreader.release()
+
+    # Define output video writer 
+    output = cv.VideoWriter(os.path.join(outputfolder, outputname), fourcc, fps, (frame_width, frame_height))
+
     # Retrieve the optical flow of the first annotated frame 
     x, y = partdf["x_coord"].iloc[0], partdf["y_coord"].iloc[0]
     currentofname = os.path.join(video_flow_folder, partdf["video_frame_id"].iloc[0] + ".npy")
@@ -46,10 +63,11 @@ for video_id in video_id_list:
         # Compare the "annotated" optical flow to all the other optical flow vectors 
         compmat = np.ones(currentflow.shape)*apflow
         compres = np.sum(compmat*currentflow, axis = 2)
-        if len(framenames) - currentframenb < 5 : 
-            cv.imshow("output", compres)
-            cv.waitKey(0)
-            print(compres.shape)
+        # if len(framenames) - currentframenb < 5 : 
+        #     cv.imshow("output", compres)
+        #     cv.waitKey(0)
+        #     print(compres.shape)
+        output.write(compres)
 
         # Determine the next optical flow vector of comparison
         currentframenb += 1
@@ -72,5 +90,7 @@ for video_id in video_id_list:
             apflow = currentflow[x, y] 
         else: 
             inFrame = False
+    
+    output.release() 
 
     print(video_id, inFrame)

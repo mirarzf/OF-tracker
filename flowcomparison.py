@@ -63,13 +63,21 @@ for video_id in video_id_list:
     while currentframenb < len(framenames) and inFrame: 
         # Compare the "annotated" optical flow to all the other optical flow vectors 
         compmat = np.ones(currentflow.shape, dtype = int)*apflow
-        compres = 255*np.sum(compmat*currentflow, axis = 2)+255
+        compres = np.sum(compmat*currentflow, axis = 2)
+        # Normalize the results to be between 0 and 1: 
+        mini = compres.min()
+        resrange = compres.max() - mini
+        compres = (compres - mini*np.ones(compres.shape))/resrange
+        # Apply a threshold so we know which part of the image moves like the annotated point 
+        seuil = 0.5
+        compres = np.where(compres > seuil, 1, 0)
         compres = compres.astype(np.float32) 
         if currentframenb < 5 : 
             cv.imshow("output", compres)
             cv.waitKey(0)
             print(compres.shape)
             print(compres)
+            print(compres.min(), compres.max())
         output.write(cv.cvtColor(compres, cv.COLOR_GRAY2BGR))
 
         # Determine the next optical flow vector of comparison

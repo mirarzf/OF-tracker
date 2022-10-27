@@ -4,6 +4,8 @@ import numpy as np
 import pandas as pd
 import cv2 as cv
 
+from utils import flow_viz
+
 ### Utility functions 
 
 def reconstructFilenameFromList(name_elements): 
@@ -21,8 +23,6 @@ def visualizePoint(img, coordlist):
     for coord in coordlist: 
         x, y = coord 
         cv.circle(img, (x,y), 5, (0,0,255), 2)
-    cv.imshow("Annotation", img)
-    cv.waitKey(100)
     return img 
 
 def calculateNewPosition(coordlist, flow, framewidth, frameheight): 
@@ -39,6 +39,7 @@ def calculateNewPosition(coordlist, flow, framewidth, frameheight):
             newcoordlist.append((-1, -1))
     
     return newcoordlist
+
 
 ### Folders 
 
@@ -89,7 +90,7 @@ for video_id in video_id_list:
     originalvideoreader.release()
 
     # Define output video writer 
-    output = cv.VideoWriter(os.path.join(outputfolder, outputname), fourcc, fps, (frame_width, frame_height))
+    output = cv.VideoWriter(os.path.join(outputfolder, outputname), fourcc, fps, (frame_width*2, frame_height))
     
     # Compare for each frame in the video the optical flow of the annotated flow to the one of the annotated point 
     currentframenb = partdf["frame_number"].iloc[0]
@@ -98,7 +99,12 @@ for video_id in video_id_list:
     while currentframenb < len(framenames) and inFrame: 
         # Draw on the image 
         visualizePoint(currentframe, [(x, y)])
-        output.write(currentframe)
+        flowimg = flow_viz.flow_to_image(currentflow, convert_to_bgr=True)
+        visualizePoint(flowimg, [(x, y)])
+        concatenation = cv.hconcat([currentframe, flowimg])
+        # cv.imshow("Annotation", flowimg)
+        # cv.waitKey(100)
+        output.write(concatenation)
 
         # Determine the next optical flow vector of comparison
         currentframenb += 1
@@ -112,7 +118,7 @@ for video_id in video_id_list:
         # Set new currentflow and new currentframe 
         currentflow = np.load(currentofname)
         currentframe = cv.imread(currentframename)
-
+ 
         # Get the new of vector of comparison 
         newx = int(x + apflow[0]) 
         newy = int(y + apflow[1]) 

@@ -4,49 +4,15 @@ import numpy as np
 import pandas as pd
 import cv2 as cv
 
-from utils import flow_viz
-
-### Utility functions 
-
-def reconstructFilenameFromList(name_elements): 
-    filename = name_elements[0]
-    for e in name_elements[1:]: 
-        filename += "_"
-        filename += e
-    return filename
-
-def visualizePoint(img, coordlist): 
-    '''
-    Given the x and y coordinates of the pixel of the image img, return an image with img drawn with a red point 
-    '''
-    # Draw a point at center (x,y)
-    for coord in coordlist: 
-        x, y = coord 
-        cv.circle(img, (x,y), 5, (0,0,255), 2)
-    return img 
-
-def calculateNewPosition(coordlist, flow, framewidth, frameheight): 
-    ''' 
-    Given a list of annotated points coordlist [(x1, y1), (x2, y2), ..., (xn, yn)], gives their next position if they are still in frame. If not in frame, default back to (-1,-1))
-    '''
-    newcoordlist = []
-    for coord in coordlist: 
-        x, y = coord
-        newx, newy = x + flow[x, y, 0], y + flow[x, y, 1]
-        if newx < frameheight and newy < framewidth and newx > 0 and newy > 0: 
-            newcoordlist.append((newx, newy))
-        else: 
-            newcoordlist.append((-1, -1))
-    
-    return newcoordlist
-
+from utils import flow_viz, annot_viz
 
 ### Folders 
 
 video_flow_folder = "C:\\Users\\hvrl\\Documents\\data\\KU\\of" 
 video_masks_folder = "C:\\Users\\hvrl\\Documents\\data\\KU\\masks"
 video_frames_folder = "C:\\Users\\hvrl\\Documents\\data\\KU\\frames"
-annotatedpoints = "C:\\Users\\hvrl\\Documents\\data\\KU\\centerpoints.csv"
+# annotatedpoints = "C:\\Users\\hvrl\\Documents\\data\\KU\\centerpoints.csv"
+annotatedpoints = "centerpointstest.csv"
 video_folder = "C:\\Users\\hvrl\\Documents\\data\\KU\\videos"
 
 outputfolder = ".\\results"
@@ -68,12 +34,27 @@ for video_id in video_id_list:
     flowfiles = [os.path.join(video_flow_folder, f) for f in framenames]
 
     # Retrieve the optical flow of the first annotated frame 
-    x, y = partdf["x_coord"].iloc[0], partdf["y_coord"].iloc[0]
     currentofname = os.path.join(video_flow_folder, partdf["video_frame_id"].iloc[0] + ".npy")
     currentframename = os.path.join(video_frames_folder, partdf["video_frame_id"].iloc[0] + ".png")
     currentflow = np.load(currentofname)
     currentframe = cv.imread(currentframename)
-    apflow = currentflow[x, y]
+
+    # Get the coordinates of the first annotated point and its optical flow vector
+    j, i = partdf["x_coord"].iloc[0], partdf["y_coord"].iloc[0]
+    apflow = currentflow[i, j]
+
+    # Get the coordinates of the annotated points and all their correspondant optical flow vectors 
+    aplist = []
+    apflowlist = []
+    for index, row in partdf.iterrows(): 
+        j, i = row["x_coord"], row["y_coord"]
+        aplist.append((i,j))
+
+        apflow = currentflow[i, j]
+        apflowlist.append(apflow)
+    n = len(aplist)
+    randomcolors = [np.random.randint(256, size=3) for index in range(n)]
+    print(randomcolors)
 
     # Read original videos for parameters of the writer 
     origvidpath = os.path.join(video_folder, video_id + "_extract.mp4")
@@ -96,14 +77,12 @@ for video_id in video_id_list:
     currentframenb = partdf["frame_number"].iloc[0]
     currentofname = partdf["video_frame_id"].iloc[0]
     inFrame = True 
-    while currentframenb < len(framenames) and inFrame: 
+    while currentframenb < len(framenames): 
         # Draw on the image 
-        visualizePoint(currentframe, [(x, y)])
+        annot_viz.visualizePoint(currentframe, [(i, j)], color=randomcolors[0])
         flowimg = flow_viz.flow_to_image(currentflow, convert_to_bgr=True)
-        visualizePoint(flowimg, [(x, y)])
+        annot_viz.visualizePoint(flowimg, [(i, j)], color=randomcolors[0])
         concatenation = cv.hconcat([currentframe, flowimg])
-        # cv.imshow("Annotation", flowimg)
-        # cv.waitKey(100)
         output.write(concatenation)
 
         # Determine the next optical flow vector of comparison
@@ -112,23 +91,19 @@ for video_id in video_id_list:
         # Get the new frame of optical flow 
         newofnamelist = os.path.basename(os.path.splitext(currentofname)[0]).split("_")[:-1]
         newofnamelist.append(str(currentframenb))
-        newofname = reconstructFilenameFromList(newofnamelist)
+        newofname = annot_viz.reconstructFilenameFromList(newofnamelist)
         currentofname = os.path.join(video_flow_folder, newofname + ".npy")
         currentframename = os.path.join(video_frames_folder, newofname + ".png")
+
         # Set new currentflow and new currentframe 
         currentflow = np.load(currentofname)
         currentframe = cv.imread(currentframename)
- 
-        # Get the new of vector of comparison 
-        newx = int(x + apflow[0]) 
-        newy = int(y + apflow[1]) 
-        x = newx 
-        y = newy 
-        # Set new annotated point optical flow if it is still in frame. Otherwise stop the loop. 
-        if x >= 0 and x < currentflow.shape[0] and y >= 0 and y < currentflow.shape[1]: 
-            apflow = currentflow[x, y] 
-        else: 
-            inFrame = False
+
+        # Get the new vector of comparison 
+        newannotated, inFrameList = annot_viz.calculateNewPosition([(i, j)], currentflow)
+        inFrame = inFrameList[0]
+        if inFrame: 
+            i, j = newannotated[0]
     
     output.release() 
 

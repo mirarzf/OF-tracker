@@ -11,8 +11,8 @@ from utils import flow_viz, annot_viz
 video_flow_folder = "C:\\Users\\hvrl\\Documents\\data\\KU\\of" 
 video_masks_folder = "C:\\Users\\hvrl\\Documents\\data\\KU\\masks"
 video_frames_folder = "C:\\Users\\hvrl\\Documents\\data\\KU\\frames"
-# annotatedpoints = "C:\\Users\\hvrl\\Documents\\data\\KU\\centerpoints.csv"
 annotatedpoints = "centerpointstest.csv"
+# annotatedpoints = "C:\\Users\\hvrl\\Documents\\data\\KU\\centerpoints.csv"
 video_folder = "C:\\Users\\hvrl\\Documents\\data\\KU\\videos"
 
 outputfolder = ".\\results"
@@ -39,19 +39,12 @@ for video_id in video_id_list:
     currentflow = np.load(currentofname)
     currentframe = cv.imread(currentframename)
 
-    # Get the coordinates of the first annotated point and its optical flow vector
-    j, i = partdf["x_coord"].iloc[0], partdf["y_coord"].iloc[0]
-    apflow = currentflow[i, j]
-
     # Get the coordinates of the annotated points and all their correspondant optical flow vectors 
     aplist = []
-    apflowlist = []
     for index, row in partdf.iterrows(): 
         j, i = row["x_coord"], row["y_coord"]
         aplist.append((i,j))
 
-        apflow = currentflow[i, j]
-        apflowlist.append(apflow)
     n = len(aplist)
     randomcolors = [np.random.randint(256, size=3) for index in range(n)]
     print(randomcolors)
@@ -76,12 +69,11 @@ for video_id in video_id_list:
     # Compare for each frame in the video the optical flow of the annotated flow to the one of the annotated point 
     currentframenb = partdf["frame_number"].iloc[0]
     currentofname = partdf["video_frame_id"].iloc[0]
-    inFrame = True 
-    while currentframenb < len(framenames): 
+    while currentframenb < len(framenames) and len(aplist) > 0: 
         # Draw on the image 
-        annot_viz.visualizePoint(currentframe, [(i, j)], color=randomcolors[0])
+        annot_viz.visualizePoint(currentframe, aplist, color=randomcolors) # multiple points 
         flowimg = flow_viz.flow_to_image(currentflow, convert_to_bgr=True)
-        annot_viz.visualizePoint(flowimg, [(i, j)], color=randomcolors[0])
+        annot_viz.visualizePoint(flowimg, aplist, color=randomcolors) # multiple points 
         concatenation = cv.hconcat([currentframe, flowimg])
         output.write(concatenation)
 
@@ -100,11 +92,16 @@ for video_id in video_id_list:
         currentframe = cv.imread(currentframename)
 
         # Get the new vector of comparison 
-        newannotated, inFrameList = annot_viz.calculateNewPosition([(i, j)], currentflow)
-        inFrame = inFrameList[0]
-        if inFrame: 
-            i, j = newannotated[0]
+        aplist, inFrameList = annot_viz.calculateNewPosition(aplist, currentflow) # multiple point 
+        # Update the color list to only keep the points in frame 
+        updaterandomcolors = []
+        for bool, color in zip(inFrameList, randomcolors): 
+            if bool: 
+                updaterandomcolors.append(color)
+        randomcolors = updaterandomcolors
+        
+        print("Points etant encore in frame :", len(aplist), len(randomcolors))
     
     output.release() 
 
-    print(video_id, inFrame)
+    print(video_id, len(aplist))

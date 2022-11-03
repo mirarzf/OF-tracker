@@ -9,14 +9,14 @@ def reconstructFilenameFromList(name_elements):
         filename += e
     return filename
 
-def visualizePoint(img, coordlist, color=(0,0,255)): 
+def visualizePoint(img, coordlist, color=[(0,0,255)]): 
     '''
     Given the i and j coordinates of the pixel of the image img, return an image with img drawn with a red point 
     '''
     # Draw a point at center (i,j)
-    for coord in coordlist: 
-        i, j = coord 
-        cv.circle(img, (j,i), 5, (int(color[0]), int(color[1]), int(color[2])), 2)
+    for index in range(len(coordlist)): 
+        i, j = coordlist[index]
+        cv.circle(img, (j,i), 5, (int(color[index][0]), int(color[index][1]), int(color[index][2])), 2)
     return img 
 
 def calculateNewPosition(coordlist, flow): 

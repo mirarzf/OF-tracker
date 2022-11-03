@@ -39,7 +39,7 @@ for video_id in video_id_list:
     currentflow = np.load(currentofname)
     currentframe = cv.imread(currentframename)
 
-    # Get the coordinates of the annotated points and all their correspondant optical flow vectors 
+    # Get the coordinates of the annotated points 
     aplist = []
     for index, row in partdf.iterrows(): 
         j, i = row["x_coord"], row["y_coord"]

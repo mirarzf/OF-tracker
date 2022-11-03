@@ -1,23 +1,11 @@
-import numpy as np 
+import argparse
 
-A = np.array([
-    [1, 0 ], 
-    [0, 1]
-    ])
-B = np.array([
-    [8, 2], 
-    [3, 4]
-    ])
-C = np.array([1, 2])
-D = np.array([
-    [1, 1], 
-    [1, 1]
-    ])
-E = np.ones((2,3,4), dtype = int)
-E[1] = E[1]*3
-result = 10*np.sum(E, axis = 0)
+parser = argparse.ArgumentParser(description='Process some integers.')
+parser.add_argument('integers', metavar='N', type=int, nargs='+',
+                    help='an integer for the accumulator')
+parser.add_argument('--sum', dest='accumulate', action='store_const',
+                    const=sum, default=max,
+                    help='sum the integers (default: find the max)')
 
-print(
-    E, "\n", 
-    result
-)
+args = parser.parse_args()
+print(args.accumulate(args.integers))

@@ -26,8 +26,8 @@ DEVICE = 'cuda'
 
 def load_image(img, destsize): 
     img = cv.resize(img, destsize)
-    img = torch.from_numpy(img).permute(2, 0, 1).float()
-    return img[None].to(DEVICE)
+    imgtensor = torch.from_numpy(img).permute(2, 0, 1).float()
+    return imgtensor[None].to(DEVICE)
 
 def unscaledCoordlist(coordlist, scale=1): 
     newcoordlist = [(e[0]/scale, e[1]/scale) for e in coordlist]
@@ -37,7 +37,7 @@ def showAnnotatedPointsFlow(args):
 
     # Set the arguments from the parser 
     annotatedpoints = args.dataset
-    annotatedpoints = "centerpointstest.csv"
+    # annotatedpoints = "centerpointstest.csv"
 
     video_folder = args.videofolder
 
@@ -72,13 +72,21 @@ def showAnnotatedPointsFlow(args):
             print(outputname)
             fourcc = cv.VideoWriter_fourcc(*'mp4v')
             fps = cap.get(cv.CAP_PROP_FPS)
+            # Initialize the padder for later and give the correct width and height 
             frame_width = int(scale*cap.get(cv.CAP_PROP_FRAME_WIDTH)) 
             frame_height = int(scale*cap.get(cv.CAP_PROP_FRAME_HEIGHT)) 
+            ret, firstframe = cap.read()
+            cap.release()
+            firstframe = load_image(firstframe, (frame_width, frame_height))
+            print("ffshape", firstframe.shape)
+            padder = InputPadder((firstframe.shape))
+            print(padder._pad)
+            frame_width = frame_width + padder._pad[0] + padder._pad[1] 
+            frame_height = frame_height + padder._pad[2] + padder._pad[3] 
+
             print(origvidpath, fps, frame_width, frame_height)
-            print(cap.get(cv.CAP_PROP_FRAME_WIDTH))
 
             # Define output video writer 
-            # output = cv.VideoWriter(os.path.join(outputfolder, outputname), fourcc, fps, (frame_width*2, frame_height))
             output = cv.VideoWriter(os.path.join(outputfolder, outputname), fourcc, fps, (frame_width*2, frame_height))
 
             # Get the coordinates of the annotated points 
@@ -93,7 +101,8 @@ def showAnnotatedPointsFlow(args):
             randomcolors = [np.random.randint(256, size=3) for index in range(n)]
             print("Il y a {n} points annotes dans la video {video_id}".format(n=n, video_id = video_id))
 
-            # Capture the first two frames 
+            # Capture the second frame
+            cap = cv.VideoCapture(origvidpath)
             ret, beforeframe = cap.read() 
             ret, currentframe = cap.read()
 
@@ -108,7 +117,7 @@ def showAnnotatedPointsFlow(args):
                 flow_low, currentflow = model(beforeframe, currentframe, iters=20, test_mode=True)
                 
                 # Draw on the image 
-                currentframe = currentframe[0].permute(1,2,0).cpu().numpy() 
+                currentframe = currentframe[0].permute(1,2,0).cpu().numpy()
                 currentflow = currentflow[0].permute(1,2,0).cpu().detach().numpy()
                 unscaledaplist = unscaledCoordlist(aplist, scale)
                 frameimg = annot_viz.visualizePoint(currentframe.astype('uint8').copy() , unscaledaplist, color=randomcolors, scale=scale) # multiple points 
@@ -128,7 +137,7 @@ def showAnnotatedPointsFlow(args):
                         updaterandomcolors.append(color)
                 randomcolors = updaterandomcolors
                 
-                print("Points etant encore in frame :", len(aplist), len(randomcolors))
+                # print("Points etant encore in frame :", len(aplist), len(randomcolors))
 
                 # Set new currentframe 
                 beforeframe = currentframe

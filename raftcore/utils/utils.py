@@ -67,7 +67,6 @@ def bilinear_sampler(img, coords, mode='bilinear', mask=False):
     if mask:
         mask = (xgrid > -1) & (ygrid > -1) & (xgrid < 1) & (ygrid < 1)
         return img, mask.float()
-
     return img
 
 

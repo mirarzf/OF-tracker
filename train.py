@@ -1,3 +1,5 @@
+import sys 
+sys.path.append('refinenetcore')
 import os 
 import argparse
 
@@ -11,15 +13,38 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 import torch.backends.cudnn as cudnn
 
+from modelcomplete import RefineNet, Bottleneck
+
 from tqdm import tqdm
 
 ## DEFINE FOLDERS 
 outputfolder = "/results"
 
 def train(args): 
+    ## PARSER ARGUMENTS SETTINGS 
+    in_channels = args.in_channels 
+    num_classes = args.num_classes 
+    use_dropout = args.dropout 
+    pretrained = True if (args.model != "") else False 
+
     ## RETRIEVING DATA 
 
     ## INITIALIZING MODEL WITH SEEDED RANDOM WEIGHTS 
+    if torch.cuda.is_available(): 
+        DEVICE = 'cuda'
+    else: 
+        DEVICE = 'cpu'
+        
+    model = RefineNet(Bottleneck, [3, 4, 23, 3], in_channels=in_channels, num_classes=num_classes, use_dropout=use_dropout, **kwargs)
+    
+    if pretrained: 
+        trained_model = args.model 
+        pretrained_dict = torch.load(trained_model)   
+        model_dict = model.state_dict()
+
+        pretrained_dict = {k: v for k,v in pretrained_dict.items() if k in model_dict and k.find('clf_conv')==-1 and k.find('conv1')==-1}
+        model_dict.update(pretrained_dict)
+        model.load_state_dict(model_dict)
 
     ## SETTING UP PARAMETERS FOR MODEL AND TRAINING 
     # optimizer 

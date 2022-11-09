@@ -1,18 +1,30 @@
+import sys
+sys.path.append('raftcore')
+
 import os 
+import argparse
+
 import pandas as pd 
 
 import numpy as np 
-import matplotlib.pyplot as plt 
 import cv2 as cv 
+import torch
 
 from utils import annot_viz
 
+from raft import RAFT
+from utils.utils import InputPadder
+
+
+### Folders 
+outputfolder = ".\\results"
+model_folders = "C:\\Users\\hvrl\\Documents\\RAFT-master\\models"
 video_flow_folder = "C:\\Users\\hvrl\\Documents\\data\\KU\\of" 
 video_masks_folder = "C:\\Users\\hvrl\\Documents\\data\\KU\\masks"
-annotatedpoints = "C:\\Users\\hvrl\\Documents\\data\\KU\\centerpoints.csv"
 video_folder = "C:\\Users\\hvrl\\Documents\\data\\KU\\videos"
 
-outputfolder = ".\\results"
+### Main code 
+DEVICE = 'cuda'
 
 def compareFlowsToAnnotatedFlow(apcoord, flow): 
     '''
@@ -53,88 +65,164 @@ def compareFlowsToAnnotatedFlow(apcoord, flow):
 
     return compdot 
 
-apdf = pd.read_csv(annotatedpoints)
+def compareFlowsToMultipleAnnotatedFlows(apcoordlist, flow): 
+    '''
+    In: 
+    apcoordlist: list of (x,y) (pseudo-)annotated points to track. 
+    flow: vector field repsenting the optical flow. 
 
-# Get all the video_ids 
-video_id_list = apdf["video_id"].unique()
+    Out: 
+    compdotsum: numpy array of shape (height, width) with values between 0 and 1, 
+    result of the weighted sum of the comparison maps of the optical flow field with each annotated point flow vector. 
+    '''
 
-# Work on one video_id at a time 
-for video_id in video_id_list: 
-    partdf = apdf[apdf["video_id"] == video_id]
+    compdotreslist = []
+    for coord in apcoordlist: 
+        compdotreslist.append(compareFlowsToAnnotatedFlow(coord, flow))
+    compdotsum = np.sum(np.array(compdotreslist), axis=0)/len(apcoordlist)
+
+    return compdotsum
+
+def compareToAnnotatedPointsFlow(args): 
+
     
-    framenames = [f for f in os.listdir(video_flow_folder) if video_id in f and "mirrored" not in f]
-    framenames.sort()
+    ## SET THE ARGUMENTS FROM THE PARSER 
+    annotatedpoints = args.dataset 
+    annotatedpoints = "centerpointstest.csv"
 
-    flowfiles = [os.path.join(video_flow_folder, f) for f in framenames]
+    video_folder = args.videofolder 
 
-    # Retrieve the optical flow of the first annotated frame 
-    currentofname = os.path.join(video_flow_folder, partdf["video_frame_id"].iloc[0] + ".npy")
-    currentflow = np.load(currentofname)
+    scale = args.scale
 
-    # Get the coordinates of the first annotated point and its optical flow vector
-    j, i = partdf["x_coord"].iloc[0], partdf["y_coord"].iloc[0]
-    apflow = currentflow[i, j]
+    ## DATA PREPARATION 
+    # Read the annotated data 
+    apdf = pd.read_csv(annotatedpoints)
 
-    # Read original videos for parameters of the writer 
-    origvidpath = os.path.join(video_folder, video_id + "_extract.mp4")
-    originalvideoreader = cv.VideoCapture(origvidpath)
+    # Get all the video_ids 
+    video_id_list = apdf["video_id"].unique()
 
-    # Define output video parameters 
-    outputname = "out_sense_" + video_id + ".mp4" 
-    print(outputname)
-    fourcc = cv.VideoWriter_fourcc(*'mp4v')
-    fps = originalvideoreader.get(cv.CAP_PROP_FPS)
-    frame_width = currentflow.shape[1]
-    frame_height = currentflow.shape[0]
-    print(origvidpath, "FPS :", fps)
-    originalvideoreader.release()
+    ## OPTICAL FLOW MODEL PREPARATION 
+    # Initialize RAFT model 
+    model = torch.nn.DataParallel(RAFT(args))
+    model.load_state_dict(torch.load(os.path.join(model_folders,args.model)))
 
-    # Define output video writer 
-    output = cv.VideoWriter(os.path.join(outputfolder, outputname), fourcc, fps, (frame_width, frame_height))
-    
-    # Compare for each frame in the video the optical flow of the annotated flow to the one of the annotated point 
-    currentframenb = partdf["frame_number"].iloc[0]
-    currentofname = partdf["video_frame_id"].iloc[0]
-    inFrame = True # TURN TO TRUE WHEN FINALIZING THE CODE finalcountdown  
+    model = model.module
+    model.to(DEVICE)
+    model.eval()
+
+    ## WORK ON EACH VIDEO
+    with torch.no_grad(): 
+
+        # Work on one video_id at a time 
+        for video_id in video_id_list: 
+            partdf = apdf[apdf["video_id"] == video_id]
+            
+            # Read original videos for parameters of the writer 
+            origvidpath = os.path.join(video_folder, video_id + "_extract.mp4")
+            cap = cv.VideoCapture(origvidpath)
+
+            # Define output video parameters 
+            outputname = "out_sense_" + video_id + ".mp4" 
+            print(outputname)
+            fourcc = cv.VideoWriter_fourcc(*'mp4v')
+            fps = cap.get(cv.CAP_PROP_FPS)
+            # Initialize the padder for later and give the correct width and height 
+            frame_width = int(scale*cap.get(cv.CAP_PROP_FRAME_WIDTH)) 
+            frame_height = int(scale*cap.get(cv.CAP_PROP_FRAME_HEIGHT)) 
+            ret, firstframe = cap.read()
+            cap.release()
+            firstframe = annot_viz.load_image(firstframe, (frame_width, frame_height))
+            print("ffshape", firstframe.shape)
+            padder = InputPadder((firstframe.shape))
+            print(padder._pad)
+            frame_width = frame_width + padder._pad[0] + padder._pad[1] 
+            frame_height = frame_height + padder._pad[2] + padder._pad[3] 
+
+            print(origvidpath, fps, frame_width, frame_height)
+
+            # Define output video writer 
+            output = cv.VideoWriter(os.path.join(outputfolder, outputname), fourcc, fps, (frame_width, frame_height))
+
+            # Get the coordinates of the annotated points 
+            aplist = []
+            for index, row in partdf.iterrows(): 
+                j, i = row["x_coord"], row["y_coord"]
+                j, i = int(j*scale), int(i*scale)
+                aplist.append((i,j))
+
+            # Create random colors list for the annotated points visualization 
+            n = len(aplist)
+            print(aplist)
+            randomcolors = [np.random.randint(256, size=3) for index in range(n)]
+            print("# annotated points in video {video_id} : {n}".format(n=n, video_id = video_id))
+
+            # Capture the first two frames
+            cap = cv.VideoCapture(origvidpath)
+            ret, beforeframe = cap.read() 
+            ret, currentframe = cap.read()
+
+            # Prep the before frame and set the InputPadder 
+            beforeframe = annot_viz.load_image(beforeframe, (frame_width, frame_height))
+            padder = InputPadder(beforeframe.shape)
+            beforeframe = padder.pad(beforeframe)[0]
+
+            while ret and len(aplist) > 0: 
+                # Prep the current frame for optical flow retrieving
+                currentframe = annot_viz.load_image(currentframe, (frame_width, frame_height))
+                currentframe = padder.pad(currentframe)[0]
+
+                # Retrieve the optical flow between beforeframe and currentframe 
+                flow_low, currentflow = model(beforeframe, currentframe, iters=20, test_mode=True)
+                currentflow = currentflow[0].permute(1,2,0).cpu().detach().numpy()
+
+                # Compare the "annotated" optical flow to all the other optical flow vectors 
+                compres = compareFlowsToMultipleAnnotatedFlows(aplist, currentflow) 
+
+                # Apply a threshold so we know which part of the image moves like the annotated point 
+                seuil = np.quantile(compres, 0.9)
+                # seuil = 0.9
+                print("Le seul est : ", seuil)
+                compres = np.where(compres < seuil, 0, compres)
+                compres *= 255
+                compres = np.expand_dims(compres, axis = -1)
+                compres = np.concatenate((compres, compres, compres), axis = -1)
+                compres = np.uint8(compres)
+                compres = annot_viz.visualizePoint(compres, aplist, color=randomcolors)
+                cv.imshow("output", compres)
+                cv.waitKey(10)
+                output.write(compres)
+
+                # Get the new vector of comparison 
+                aplist, inFrameList = annot_viz.calculateNewPosition(aplist, currentflow) # multiple points 
+                # Update the color list to only keep the points in frame 
+                updaterandomcolors = []
+                for bool, color in zip(inFrameList, randomcolors): 
+                    if bool: 
+                        updaterandomcolors.append(color)
+                randomcolors = updaterandomcolors
+                
+                print("Points etant encore in frame :", len(aplist), len(randomcolors))
+
+                # Set new currentframe 
+                beforeframe = currentframe
+                ret, currentframe = cap.read()
+        
+            cap.release()
+            output.release() 
+
+        print(video_id, len(aplist))
 
 
-    while currentframenb < len(framenames) and inFrame: 
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="This script creates a video containing all the resulting map of attention "
+                                                "to focus the segmentation map around the hand")
+    parser.add_argument('--model', default='raft-sintel.pth', help="restore checkpoint")
+    parser.add_argument('--dataset', default='C:\\Users\\hvrl\\Documents\\data\\KU\\centerpoints.csv', help="CSV file with annotated points")
+    parser.add_argument('--videofolder', '-vf', default='C:\\Users\\hvrl\\Documents\\data\\KU\\videos', help="folder containig the annotated videos")
+    parser.add_argument('--scale', default=0.5, type=float, help="scale to resize the video frames. Default: 0.5")
+    parser.add_argument('--small', action='store_true', help='use small model')
+    parser.add_argument('--mixed_precision', action='store_true', help='use mixed precision')
+    parser.add_argument('--alternate_corr', action='store_true', help='use efficent correlation implementation')
+    args = parser.parse_args()
 
-        # Compare the "annotated" optical flow to all the other optical flow vectors 
-        compres = compareFlowsToAnnotatedFlow((i,j), currentflow) 
-
-        # Apply a threshold so we know which part of the image moves like the annotated point 
-        seuil = np.quantile(compres, 0.85)
-        # print(seuil)
-        compres = 255*np.where(compres > seuil, 1, 0)
-        compres = np.expand_dims(compres, axis = -1)
-        compres = np.concatenate((compres, compres, compres), axis = -1)
-        compres = np.uint8(compres)
-        compres = annot_viz.visualizePoint(compres, [(i,j)])
-        # if currentframenb < 5 : 
-        #     print("compres check dims : \n", compres[0,0,:])
-        #     cv.imshow("output", compres)
-        #     cv.waitKey(0)
-        #     print("compres.shape :", compres.shape)
-        output.write(compres)
-
-        # Determine the next optical flow vector of comparison
-        currentframenb += 1
-
-        # Get the new frame of optical flow 
-        newofnamelist = os.path.basename(os.path.splitext(currentofname)[0]).split("_")[:-1]
-        newofnamelist.append(str(currentframenb))
-        newofname = annot_viz.reconstructFilenameFromList(newofnamelist)
-        currentofname = os.path.join(video_flow_folder, newofname + ".npy")
-        # Set new currentflow 
-        currentflow = np.load(currentofname)
-
-        # Get the new vector of comparison 
-        newannotated, inFrameList = annot_viz.calculateNewPosition([(i, j)], currentflow)
-        inFrame = inFrameList[0]
-        if inFrame: 
-            i, j = newannotated[0]
-    
-    output.release() 
-
-    print(video_id, inFrame)
+    compareToAnnotatedPointsFlow(args)

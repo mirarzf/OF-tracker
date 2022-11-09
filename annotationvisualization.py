@@ -2,7 +2,6 @@ import sys
 sys.path.append('raftcore')
 
 import os
-import glob
 import argparse
 
 import numpy as np 
@@ -24,25 +23,24 @@ model_folders = "C:\\Users\\hvrl\\Documents\\RAFT-master\\models"
 ### Main code 
 DEVICE = 'cuda'
 
-def load_image(img, destsize): 
-    img = cv.resize(img, destsize)
-    imgtensor = torch.from_numpy(img).permute(2, 0, 1).float()
-    return imgtensor[None].to(DEVICE)
-
-def unscaledCoordlist(coordlist, scale=1): 
-    newcoordlist = [(e[0]/scale, e[1]/scale) for e in coordlist]
-    return newcoordlist
-
 def showAnnotatedPointsFlow(args): 
 
-    # Set the arguments from the parser 
+    ## SET THE ARGUMENTS FROM THE PARSER 
     annotatedpoints = args.dataset
-    # annotatedpoints = "centerpointstest.csv"
+    annotatedpoints = "centerpointstest.csv"
 
     video_folder = args.videofolder
 
     scale = args.scale
 
+    ## DATA PREPARATION 
+    # Read the annotated data 
+    apdf = pd.read_csv(annotatedpoints)
+
+    # Get all the video_ids 
+    video_id_list = apdf["video_id"].unique()
+
+    ## OPTICAL FLOW MODEL PREPARATION 
     # Initialize RAFT model 
     model = torch.nn.DataParallel(RAFT(args))
     model.load_state_dict(torch.load(os.path.join(model_folders,args.model)))
@@ -51,13 +49,8 @@ def showAnnotatedPointsFlow(args):
     model.to(DEVICE)
     model.eval()
 
+    ## WORK ON EACH VIDEO
     with torch.no_grad(): 
-
-        # Read the annotated data 
-        apdf = pd.read_csv(annotatedpoints)
-
-        # Get all the video_ids 
-        video_id_list = apdf["video_id"].unique()
 
         # Work on one video_id at a time 
         for video_id in video_id_list: 
@@ -77,7 +70,7 @@ def showAnnotatedPointsFlow(args):
             frame_height = int(scale*cap.get(cv.CAP_PROP_FRAME_HEIGHT)) 
             ret, firstframe = cap.read()
             cap.release()
-            firstframe = load_image(firstframe, (frame_width, frame_height))
+            firstframe = annot_viz.load_image(firstframe, (frame_width, frame_height))
             print("ffshape", firstframe.shape)
             padder = InputPadder((firstframe.shape))
             print(padder._pad)
@@ -96,20 +89,20 @@ def showAnnotatedPointsFlow(args):
                 j, i = int(j*scale), int(i*scale)
                 aplist.append((i,j))
 
+            # Create random colors list for the annotated points visualization 
             n = len(aplist)
-            print(aplist)
             randomcolors = [np.random.randint(256, size=3) for index in range(n)]
-            print("Il y a {n} points annotes dans la video {video_id}".format(n=n, video_id = video_id))
+            print("# annotated points in video {video_id} : {n}".format(n=n, video_id = video_id))
 
-            # Capture the second frame
+            # Capture the first two frames
             cap = cv.VideoCapture(origvidpath)
             ret, beforeframe = cap.read() 
             ret, currentframe = cap.read()
 
             while ret and len(aplist) > 0: 
                 # Prep the frames for optical flow retrieving
-                beforeframe = load_image(beforeframe, (frame_width, frame_height))
-                currentframe = load_image(currentframe, (frame_width, frame_height))
+                beforeframe = annot_viz.load_image(beforeframe, (frame_width, frame_height))
+                currentframe = annot_viz.load_image(currentframe, (frame_width, frame_height))
                 padder = InputPadder(beforeframe.shape)
                 beforeframe, currentframe = padder.pad(beforeframe, currentframe)
 
@@ -119,7 +112,7 @@ def showAnnotatedPointsFlow(args):
                 # Draw on the image 
                 currentframe = currentframe[0].permute(1,2,0).cpu().numpy()
                 currentflow = currentflow[0].permute(1,2,0).cpu().detach().numpy()
-                unscaledaplist = unscaledCoordlist(aplist, scale)
+                unscaledaplist = annot_viz.unscaledCoordlist(aplist, scale)
                 frameimg = annot_viz.visualizePoint(currentframe.astype('uint8').copy() , unscaledaplist, color=randomcolors, scale=scale) # multiple points 
                 flowimg = flow_viz.flow_to_image(currentflow, convert_to_bgr=True)
                 flowimg = annot_viz.visualizePoint(flowimg, unscaledaplist, color=randomcolors, scale=scale) # multiple points 
@@ -149,7 +142,9 @@ def showAnnotatedPointsFlow(args):
         print(video_id, len(aplist))
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description=
+    "This script creates a video to visualize where the first annotated points are and the corresponding pseudo labels "
+    "deduced by the optical flow vectors" )
     parser.add_argument('--model', default='raft-sintel.pth', help="restore checkpoint")
     parser.add_argument('--dataset', default='C:\\Users\\hvrl\\Documents\\data\\KU\\centerpoints.csv', help="CSV file with annotated points")
     parser.add_argument('--videofolder', '-vf', default='C:\\Users\\hvrl\\Documents\\data\\KU\\videos', help="folder containig the annotated videos")

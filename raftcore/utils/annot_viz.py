@@ -1,6 +1,15 @@
 import cv2 as cv
+import torch
 
 ### Utility functions 
+
+### Main code 
+DEVICE = 'cuda'
+
+def load_image(img, destsize): 
+    img = cv.resize(img, destsize)
+    imgtensor = torch.from_numpy(img).permute(2, 0, 1).float()
+    return imgtensor[None].to(DEVICE)
 
 def reconstructFilenameFromList(name_elements): 
     filename = name_elements[0]
@@ -9,13 +18,17 @@ def reconstructFilenameFromList(name_elements):
         filename += e
     return filename
 
+def unscaledCoordlist(coordlist, scale=1): 
+    newcoordlist = [(e[0]/scale, e[1]/scale) for e in coordlist]
+    return newcoordlist
+
 def visualizePoint(img, coordlist, color=[(0,0,255)], scale = 1): 
     '''
     Given the i and j coordinates of the pixel of the image img, return an image with img drawn with a red point 
     '''
     # Draw a point at center (i,j)
-    for index in range(len(coordlist)): 
-        i, j = coordlist[index]
+    for index, coord in enumerate(coordlist): 
+        i, j = coord
         cv.circle(img, (int(j*scale),int(i*scale)), 5, (int(color[index][0]), int(color[index][1]), int(color[index][2])), 2)
     return img 
 

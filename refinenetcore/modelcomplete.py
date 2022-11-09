@@ -1,0 +1,160 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Oct 14 12:03:49 2019
+
+@author: arthur
+"""
+
+"""RefineNet
+RefineNet PyTorch for non-commercial purposes
+Copyright (c) 2018, Vladimir Nekrasov (vladimir.nekrasov@adelaide.edu.au)
+All rights reserved.
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+"""
+
+import torch.nn as nn
+import torch.nn.functional as F
+import torch
+
+from modelparts import *
+
+class RefineNet(nn.Module):
+
+    def __init__(self, block, layers, in_channels, num_classes=21, use_dropout=False):
+        self.inplanes = 64
+        super(RefineNet, self).__init__()
+        self.do = nn.Dropout(p=0.5)
+        self.conv1 = nn.Conv2d(in_channels, 64, kernel_size=7, stride=2, padding=3,
+                               bias=False)
+        self.bn1 = nn.BatchNorm2d(64)
+        self.relu = nn.ReLU(inplace=True)
+        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+        self.layer1 = self._make_layer(block, 64, layers[0], use_dropout=use_dropout)
+        self.layer2 = self._make_layer(block, 128, layers[1], stride=2, use_dropout=use_dropout)
+        self.layer3 = self._make_layer(block, 256, layers[2], stride=2, use_dropout=use_dropout)
+        self.layer4 = self._make_layer(block, 512, layers[3], stride=2, use_dropout=use_dropout)
+        self.p_ims1d2_outl1_dimred = conv3x3(2048, 512, bias=False)
+        self.adapt_stage1_b = self._make_rcu(512, 512, 2, 2)
+        self.mflow_conv_g1_pool = self._make_crp(512, 512, 4)
+        self.mflow_conv_g1_b = self._make_rcu(512, 512, 3, 2)
+        self.mflow_conv_g1_b3_joint_varout_dimred = conv3x3(512, 256, bias=False)
+        self.p_ims1d2_outl2_dimred = conv3x3(1024, 256, bias=False)
+        self.adapt_stage2_b = self._make_rcu(256, 256, 2, 2)
+        self.adapt_stage2_b2_joint_varout_dimred = conv3x3(256, 256, bias=False)
+        self.mflow_conv_g2_pool = self._make_crp(256, 256, 4)
+        self.mflow_conv_g2_b = self._make_rcu(256, 256, 3, 2)
+        self.mflow_conv_g2_b3_joint_varout_dimred = conv3x3(256, 256, bias=False)
+
+        self.p_ims1d2_outl3_dimred = conv3x3(512, 256, bias=False)
+        self.adapt_stage3_b = self._make_rcu(256, 256, 2, 2)
+        self.adapt_stage3_b2_joint_varout_dimred = conv3x3(256, 256, bias=False)
+        self.mflow_conv_g3_pool = self._make_crp(256, 256, 4)
+        self.mflow_conv_g3_b = self._make_rcu(256, 256, 3, 2)
+        self.mflow_conv_g3_b3_joint_varout_dimred = conv3x3(256, 256, bias=False)
+
+        self.p_ims1d2_outl4_dimred = conv3x3(256, 256, bias=False)
+        self.adapt_stage4_b = self._make_rcu(256, 256, 2, 2)
+        self.adapt_stage4_b2_joint_varout_dimred = conv3x3(256, 256, bias=False)
+        self.mflow_conv_g4_pool = self._make_crp(256, 256, 4)
+        self.mflow_conv_g4_b = self._make_rcu(256, 256, 3, 2)
+
+        self.clf_conv = nn.Conv2d(256, num_classes, kernel_size=3, stride=1,
+                                  padding=1, bias=True)
+
+    def _make_crp(self, in_planes, out_planes, stages):
+        layers = [CRPBlock(in_planes, out_planes,stages)]
+        return nn.Sequential(*layers)
+    
+    def _make_rcu(self, in_planes, out_planes, blocks, stages):
+        layers = [RCUBlock(in_planes, out_planes, blocks, stages)]
+        return nn.Sequential(*layers)
+
+    def _make_layer(self, block, planes, blocks, stride=1, use_dropout=False):
+        downsample = None
+        if stride != 1 or self.inplanes != planes * block.expansion:
+            downsample = nn.Sequential(
+                nn.Conv2d(self.inplanes, planes * block.expansion,
+                          kernel_size=1, stride=stride, bias=False),
+                nn.BatchNorm2d(planes * block.expansion),
+            )
+
+        layers = []
+        layers.append(block(self.inplanes, planes, stride, downsample, use_dropout=use_dropout))
+        self.inplanes = planes * block.expansion
+        for i in range(1, blocks):
+            layers.append(block(self.inplanes, planes, use_dropout=use_dropout))
+
+        return nn.Sequential(*layers)
+
+    def forward(self, x):
+        [height, width] = x.size()[2:]
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+        x = self.maxpool(x)
+
+        l1 = self.layer1(x)
+        l2 = self.layer2(l1)
+        l3 = self.layer3(l2)
+        l4 = self.layer4(l3)
+
+        l4 = self.do(l4)
+        l3 = self.do(l3)
+
+        x4 = self.p_ims1d2_outl1_dimred(l4)
+        x4 = self.adapt_stage1_b(x4)
+        x4 = self.relu(x4)
+        x4 = self.mflow_conv_g1_pool(x4)
+        x4 = self.mflow_conv_g1_b(x4)
+        x4 = self.mflow_conv_g1_b3_joint_varout_dimred(x4)
+        x4 = nn.Upsample(size=l3.size()[2:], mode='bilinear', align_corners=True)(x4)
+
+        x3 = self.p_ims1d2_outl2_dimred(l3)
+        x3 = self.adapt_stage2_b(x3)
+        x3 = self.adapt_stage2_b2_joint_varout_dimred(x3)
+        x3 = x3 + x4
+        x3 = F.relu(x3)
+        x3 = self.mflow_conv_g2_pool(x3)
+        x3 = self.mflow_conv_g2_b(x3)
+        x3 = self.mflow_conv_g2_b3_joint_varout_dimred(x3)
+        x3 = nn.Upsample(size=l2.size()[2:], mode='bilinear', align_corners=True)(x3)
+
+        x2 = self.p_ims1d2_outl3_dimred(l2)
+        x2 = self.adapt_stage3_b(x2)
+        x2 = self.adapt_stage3_b2_joint_varout_dimred(x2)
+        x2 = x2 + x3
+        x2 = F.relu(x2)
+        x2 = self.mflow_conv_g3_pool(x2)
+        x2 = self.mflow_conv_g3_b(x2)
+        x2 = self.mflow_conv_g3_b3_joint_varout_dimred(x2)
+        x2 = nn.Upsample(size=l1.size()[2:], mode='bilinear', align_corners=True)(x2)
+
+        x1 = self.p_ims1d2_outl4_dimred(l1)
+        x1 = self.adapt_stage4_b(x1)
+        x1 = self.adapt_stage4_b2_joint_varout_dimred(x1)
+        x1 = x1 + x2
+        x1 = F.relu(x1)
+        x1 = self.mflow_conv_g4_pool(x1)
+        x1 = self.mflow_conv_g4_b(x1)
+        x1 = self.do(x1)
+
+        out = self.clf_conv(x1)
+        out = nn.Upsample(size=[height, width], mode='bilinear', align_corners=True)(out)
+        return torch.sigmoid(out)

@@ -18,10 +18,7 @@ from utils.utils import InputPadder
 
 ### Folders 
 outputfolder = ".\\results"
-model_folders = "C:\\Users\\hvrl\\Documents\\RAFT-master\\models"
-video_flow_folder = "C:\\Users\\hvrl\\Documents\\data\\KU\\of" 
-video_masks_folder = "C:\\Users\\hvrl\\Documents\\data\\KU\\masks"
-video_folder = "C:\\Users\\hvrl\\Documents\\data\\KU\\videos"
+model_folder = "C:\\Users\\hvrl\\Documents\\RAFT-master\\models"
 
 ### Main code 
 DEVICE = 'cuda'
@@ -104,7 +101,7 @@ def compareToAnnotatedPointsFlow(args):
     ## OPTICAL FLOW MODEL PREPARATION 
     # Initialize RAFT model 
     model = torch.nn.DataParallel(RAFT(args))
-    model.load_state_dict(torch.load(os.path.join(model_folders,args.model)))
+    model.load_state_dict(torch.load(os.path.join(model_folder,args.model)))
 
     model = model.module
     model.to(DEVICE)

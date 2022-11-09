@@ -18,7 +18,7 @@ from utils.utils import InputPadder
 
 ### Folders 
 outputfolder = ".\\results"
-model_folders = "C:\\Users\\hvrl\\Documents\\RAFT-master\\models"
+model_folder = "C:\\Users\\hvrl\\Documents\\RAFT-master\\models"
 
 ### Main code 
 DEVICE = 'cuda'
@@ -43,7 +43,7 @@ def showAnnotatedPointsFlow(args):
     ## OPTICAL FLOW MODEL PREPARATION 
     # Initialize RAFT model 
     model = torch.nn.DataParallel(RAFT(args))
-    model.load_state_dict(torch.load(os.path.join(model_folders,args.model)))
+    model.load_state_dict(torch.load(os.path.join(model_folder,args.model)))
 
     model = model.module
     model.to(DEVICE)

@@ -85,7 +85,7 @@ def compareToAnnotatedPointsFlow(args):
     
     ## SET THE ARGUMENTS FROM THE PARSER 
     annotatedpoints = args.dataset 
-    annotatedpoints = "centerpointstest.csv"
+    # annotatedpoints = "centerpointstest.csv"
 
     video_folder = args.videofolder 
 
@@ -124,27 +124,27 @@ def compareToAnnotatedPointsFlow(args):
             fourcc = cv.VideoWriter_fourcc(*'mp4v')
             fps = cap.get(cv.CAP_PROP_FPS)
             # Initialize the padder for later and give the correct width and height 
-            frame_width = int(scale*cap.get(cv.CAP_PROP_FRAME_WIDTH)) 
-            frame_height = int(scale*cap.get(cv.CAP_PROP_FRAME_HEIGHT)) 
+            frame_width_old = int(scale*cap.get(cv.CAP_PROP_FRAME_WIDTH)) 
+            frame_height_old = int(scale*cap.get(cv.CAP_PROP_FRAME_HEIGHT)) 
             ret, firstframe = cap.read()
             cap.release()
-            firstframe = annot_viz.load_image(firstframe, (frame_width, frame_height))
+            firstframe = annot_viz.load_image(firstframe, (frame_width_old, frame_height_old))
             print("ffshape", firstframe.shape)
             padder = InputPadder((firstframe.shape))
             print(padder._pad)
-            frame_width = frame_width + padder._pad[0] + padder._pad[1] 
-            frame_height = frame_height + padder._pad[2] + padder._pad[3] 
+            frame_width = frame_width_old + padder._pad[0] + padder._pad[1] 
+            frame_height = frame_height_old + padder._pad[2] + padder._pad[3] 
 
             print(origvidpath, fps, frame_width, frame_height)
 
             # Define output video writer 
-            output = cv.VideoWriter(os.path.join(outputfolder, outputname), fourcc, fps, (frame_width, frame_height))
+            output = cv.VideoWriter(os.path.join(outputfolder, outputname), fourcc, fps, (frame_width*2, frame_height))
 
             # Get the coordinates of the annotated points 
             aplist = []
             for index, row in partdf.iterrows(): 
                 j, i = row["x_coord"], row["y_coord"]
-                j, i = int(j*scale), int(i*scale)
+                j, i = int(j*scale)+padder._pad[0], int(i*scale)+padder._pad[2]
                 aplist.append((i,j))
 
             # Create random colors list for the annotated points visualization 
@@ -156,7 +156,7 @@ def compareToAnnotatedPointsFlow(args):
             # Capture the first two frames
             cap = cv.VideoCapture(origvidpath)
             ret, beforeframe = cap.read() 
-            ret, currentframe = cap.read()
+            ret, currentframeimg = cap.read()
 
             # Prep the before frame and set the InputPadder 
             beforeframe = annot_viz.load_image(beforeframe, (frame_width, frame_height))
@@ -165,8 +165,9 @@ def compareToAnnotatedPointsFlow(args):
 
             while ret and len(aplist) > 0: 
                 # Prep the current frame for optical flow retrieving
-                currentframe = annot_viz.load_image(currentframe, (frame_width, frame_height))
-                currentframe = padder.pad(currentframe)[0]
+                currentframeimg = annot_viz.load_image(currentframeimg, (frame_width, frame_height))
+                currentframe = padder.pad(currentframeimg)[0]
+                currentframeimg = currentframeimg[0].permute(1,2,0).cpu().numpy().astype('uint8')
 
                 # Retrieve the optical flow between beforeframe and currentframe 
                 flow_low, currentflow = model(beforeframe, currentframe, iters=20, test_mode=True)
@@ -178,19 +179,22 @@ def compareToAnnotatedPointsFlow(args):
                 # Apply a threshold so we know which part of the image moves like the annotated point 
                 seuil = np.quantile(compres, 0.9)
                 # seuil = 0.9
-                print("Le seul est : ", seuil)
+                print("Le seuil est : ", seuil)
                 compres = np.where(compres < seuil, 0, compres)
                 compres *= 255
                 compres = np.expand_dims(compres, axis = -1)
                 compres = np.concatenate((compres, compres, compres), axis = -1)
                 compres = np.uint8(compres)
                 compres = annot_viz.visualizePoint(compres, aplist, color=randomcolors)
+                frameimg = annot_viz.visualizePoint(currentframeimg, aplist, color=randomcolors)
+                print(frameimg.shape, compres.shape, type(frameimg), type(compres))
+                concatenation = cv.hconcat([frameimg, compres])
                 cv.imshow("output", compres)
                 cv.waitKey(10)
-                output.write(compres)
+                output.write(concatenation)
 
                 # Get the new vector of comparison 
-                aplist, inFrameList = annot_viz.calculateNewPosition(aplist, currentflow) # multiple points 
+                aplist, inFrameList = annot_viz.calculateNewPosition(aplist, currentflow)
                 # Update the color list to only keep the points in frame 
                 updaterandomcolors = []
                 for bool, color in zip(inFrameList, randomcolors): 
@@ -202,7 +206,7 @@ def compareToAnnotatedPointsFlow(args):
 
                 # Set new currentframe 
                 beforeframe = currentframe
-                ret, currentframe = cap.read()
+                ret, currentframeimg = cap.read()
         
             cap.release()
             output.release() 

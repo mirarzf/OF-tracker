@@ -1,11 +1,6 @@
-import argparse
+import cv2 as cv 
+import numpy as np 
 
-parser = argparse.ArgumentParser(description='Process some integers.')
-parser.add_argument('integers', metavar='N', type=int, nargs='+',
-                    help='an integer for the accumulator')
-parser.add_argument('--sum', dest='accumulate', action='store_const',
-                    const=sum, default=max,
-                    help='sum the integers (default: find the max)')
+image = cv.imread("D:\\Master Thesis\\data\\EgoHOS\\train\\label\\ego4d_000a3525-6c98-4650-aaab-be7d2c7b9402_600.png")
 
-args = parser.parse_args()
-print(args.accumulate(args.integers))
+print(np.unique(image))

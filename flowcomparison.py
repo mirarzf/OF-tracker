@@ -85,7 +85,7 @@ def compareToAnnotatedPointsFlow(args):
     
     ## SET THE ARGUMENTS FROM THE PARSER 
     annotatedpoints = args.dataset 
-    # annotatedpoints = "centerpointstest.csv"
+    annotatedpoints = "centerpointstest.csv"
 
     video_folder = args.videofolder 
 
@@ -187,7 +187,6 @@ def compareToAnnotatedPointsFlow(args):
                 compres = np.uint8(compres)
                 compres = annot_viz.visualizePoint(compres, aplist, color=randomcolors)
                 frameimg = annot_viz.visualizePoint(currentframeimg, aplist, color=randomcolors)
-                print(frameimg.shape, compres.shape, type(frameimg), type(compres))
                 concatenation = cv.hconcat([frameimg, compres])
                 cv.imshow("output", compres)
                 cv.waitKey(10)

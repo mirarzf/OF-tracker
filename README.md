@@ -17,3 +17,5 @@ The annotated videos are stored in the folder given at the head of the files und
 python annotationvisualization.py --model raft-things.pth --dataset centerpointstest.csv 
 ```
 
+Useful links: 
+(https://github.com/LeeJunHyun/Image_Segmentation)[https://github.com/LeeJunHyun/Image_Segmentation]

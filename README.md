@@ -18,4 +18,4 @@ python annotationvisualization.py --model raft-things.pth --dataset centerpoints
 ```
 
 Useful links: 
-[https://github.com/LeeJunHyun/Image_Segmentation](https://github.com/LeeJunHyun/Image_Segmentation)
+[Pytorch Implementation of UNet](https://github.com/LeeJunHyun/Image_Segmentation)

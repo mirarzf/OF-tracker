@@ -77,8 +77,8 @@ class OutConv(nn.Module):
         return self.conv(x)
 
 class Attention(nn.Module): 
-    def __init__(self) -> None:
+    def __init__(self, out_channels) -> None:
         super().__init__()
     
     def forward(self, gated, x): 
-        return x
+        return gated*x

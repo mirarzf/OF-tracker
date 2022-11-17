@@ -180,7 +180,7 @@ def compareToAnnotatedPointsFlow(args):
                 seuil = np.quantile(compres, 0.9)
                 # seuil = 0.9
                 print("Le seuil est : ", seuil)
-                compres = np.where(compres < seuil, 0, compres)
+                # compres = np.where(compres < seuil, 0, compres)
                 compres *= 255
                 compres = np.expand_dims(compres, axis = -1)
                 compres = np.concatenate((compres, compres, compres), axis = -1)

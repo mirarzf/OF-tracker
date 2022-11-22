@@ -48,7 +48,7 @@ class UNet(nn.Module):
 # UNet with attention module added 
 class UNetAtt(nn.Module):
     def __init__(self, n_channels, n_classes, bilinear=False, attention=False):
-        super(UNet, self).__init__()
+        super(UNetAtt, self).__init__()
         self.n_channels = n_channels
         self.n_classes = n_classes
         self.bilinear = bilinear

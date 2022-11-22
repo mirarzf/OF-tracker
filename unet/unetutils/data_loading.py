@@ -82,8 +82,8 @@ class CarvanaDataset(BasicDataset):
     def __init__(self, images_dir, masks_dir, scale=1):
         super().__init__(images_dir, masks_dir, scale, mask_suffix='_mask')
 
-class AttentionDataset(BasicDataset): 
-    def __init__(self, images_dir: str, masks_dir: str, attmaps_dir: str, scale: float = 1.0, mask_suffix: str = '', withatt: bool = True):
+class AttentionDataset(Dataset): 
+    def __init__(self, images_dir: str, masks_dir: str, scale: float = 1.0, mask_suffix: str = '', attmaps_dir: str = '', withatt: bool = True):
         self.withatt = withatt
 
         self.images_dir = Path(images_dir)
@@ -139,8 +139,9 @@ class AttentionDataset(BasicDataset):
         mask_file = list(self.masks_dir.glob(name + self.mask_suffix + '.*'))
         img_file = list(self.images_dir.glob(name + '.*'))
         if self.withatt: 
-            attmap_file = list(self.attmaps_dir.glob(name + '.*'))
-
+            attmap_file = list(self.masks_dir.glob(name + '.*'))
+            print(attmap_file)
+        
         assert len(img_file) == 1, f'Either no image or multiple images found for the ID {name}: {img_file}'
         assert len(mask_file) == 1, f'Either no mask or multiple masks found for the ID {name}: {mask_file}.'
         if self.withatt: 
@@ -149,7 +150,7 @@ class AttentionDataset(BasicDataset):
         mask = self.load(mask_file[0])
         img = self.load(img_file[0])
         if self.withatt: 
-            attmap = self.load(attmap[0])
+            attmap = self.load(attmap_file[0])
 
         if self.withatt: 
             assert img.size == mask.size and img.size == attmap.size, \

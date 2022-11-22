@@ -18,7 +18,7 @@ from unet.unet_model import UNet, UNetAtt
 
 dir_img = Path('./data/imgs/')
 dir_mask = Path('./data/masks/')
-dir_attmap = Path('/data/attmaps')
+dir_attmap = Path('./data/attmaps/')
 dir_checkpoint = Path('./checkpoints/')
 
 
@@ -34,7 +34,7 @@ def train_net(net,
               useatt: bool = False):
     # 1. Create dataset
     if useatt: 
-        dataset = AttentionDataset(dir_img, dir_mask, dir_attmap, img_scale)
+        dataset = AttentionDataset(images_dir=dir_img, masks_dir=dir_mask, attmaps_dir=dir_attmap, scale=img_scale)
     else: 
         dataset = BasicDataset(dir_img, dir_mask, img_scale)
 

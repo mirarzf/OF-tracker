@@ -8,9 +8,9 @@ import torch.nn.functional as F
 from PIL import Image
 from torchvision import transforms
 
-from unet.utils.data_loading import BasicDataset
+from unet.unetutils.data_loading import BasicDataset
 from unet import UNet
-from unet.utils.utils import plot_img_and_mask
+from unet.unetutils.utils import plot_img_and_mask
 
 def predict_img(net,
                 full_img,

@@ -55,7 +55,7 @@ class Up(nn.Module):
 
     def forward(self, x1, x2):
         x1 = self.up(x1)
-        # input is CHW
+        # input is 1CHW
         diffY = x2.size()[2] - x1.size()[2]
         diffX = x2.size()[3] - x1.size()[3]
 
@@ -76,9 +76,24 @@ class OutConv(nn.Module):
     def forward(self, x):
         return self.conv(x)
 
+
+### Class additions to the model 
+
 class Attention(nn.Module): 
-    def __init__(self, out_channels) -> None:
+    def __init__(self, in_channels) -> None:
         super().__init__()
     
-    def forward(self, gated, x): 
-        return gated*x
+    def forward(self, attmap, x): 
+        # input is 1CHW
+        diffY = attmap.size()[2] - x.size()[2]
+        diffX = attmap.size()[3] - x.size()[3]
+
+        x = F.pad(x, [diffX // 2, diffX - diffX // 2,
+                        diffY // 2, diffY - diffY // 2])
+        
+        # input is 1CHW
+        # Repeat the attention map to obtain a feature map of input CHW similar to the gated signal 
+        # The attmap.size()[0] should be 1 by default 
+        attmap.repeat(1, x.size()[1], 1, 1) 
+        
+        return attmap*x

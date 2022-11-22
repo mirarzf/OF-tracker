@@ -27,10 +27,14 @@ class UNet(nn.Module):
         self.up4 = Up(128, 64, bilinear)
 
         if attention: 
-            self.att1 = Attention(out_channels=512)
-            self.att2 = Attention(out_channels=256)
-            self.att3 = Attention(out_channels=128)
-            self.att4 = Attention(out_channels=64)
+            # Path down 
+            self.maxpool = nn.MaxPool2d(2)
+
+            # Attention gate 
+            self.att1 = Attention(in_channels=512)
+            self.att2 = Attention(in_channels=256)
+            self.att3 = Attention(in_channels=128)
+            self.att4 = Attention(in_channels=64)
 
 
         self.outc = OutConv(64, n_classes)
@@ -45,10 +49,10 @@ class UNet(nn.Module):
 
         if self.attention: 
             # Attention map input 
-            attmap1 = self.inc(attmap)
-            attmap2 = self.down1(attmap1)
-            attmap3 = self.down2(attmap2)
-            attmap4 = self.down3(attmap3)
+            attmap1 = self.maxpool(attmap)
+            attmap2 = self.maxpool(attmap1)
+            attmap3 = self.maxpool(attmap2)
+            attmap4 = self.maxpool(attmap3)
 
             # Attention modules 
             attres1 = self.att2(attmap1, x1)

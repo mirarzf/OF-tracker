@@ -1,10 +1,20 @@
 *.pyc
 __pycache__/
+
+# Avoid keeping the checkpoints from training 
+
 checkpoints/
 *.pth
+
+# Avoid keeping data 
+
 *.jpg
 *.png
 *.mp4
+
 venv/
+
 .idea/
+
+# Avoid keeping wandb logs 
 wandb/

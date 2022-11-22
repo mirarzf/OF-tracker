@@ -14,7 +14,7 @@ The file `flowcomparison.py` creates an attention map using the annotated points
 The pth files corresponding to optical flow are stored in the folder given at the head of the files under variable `model_folders`. 
 The annotated videos are stored in the folder given at the head of the files under variable `video_folder` but can be changed with the argument --videofolder. 
 ```python
-python annotationvisualization.py --model raft-things.pth --dataset centerpointstest.csv 
+python flowcomparison.py --model raft-things.pth --dataset centerpointstest.csv 
 ```
 
 Useful links: 

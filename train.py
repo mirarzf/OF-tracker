@@ -11,13 +11,14 @@ from torch import optim
 from torch.utils.data import DataLoader, random_split
 from tqdm import tqdm
 
-from unet.unetutils.data_loading import BasicDataset, CarvanaDataset
+from unet.unetutils.data_loading import BasicDataset, AttentionDataset
 from unet.unetutils.dice_score import dice_loss
 from evaluate import evaluate
-from unet import UNet
+from unet.unet_model import UNet, UNetAtt
 
 dir_img = Path('./data/imgs/')
 dir_mask = Path('./data/masks/')
+dir_attmap = Path('/data/attmaps')
 dir_checkpoint = Path('./checkpoints/')
 
 
@@ -29,9 +30,13 @@ def train_net(net,
               val_percent: float = 0.1,
               save_checkpoint: bool = True,
               img_scale: float = 0.5,
-              amp: bool = False):
+              amp: bool = False, 
+              useatt: bool = False):
     # 1. Create dataset
-    dataset = BasicDataset(dir_img, dir_mask, img_scale)
+    if useatt: 
+        dataset = AttentionDataset(dir_img, dir_mask, dir_attmap, img_scale)
+    else: 
+        dataset = BasicDataset(dir_img, dir_mask, img_scale)
 
     # 2. Split into train / validation partitions
     n_val = int(len(dataset) * val_percent)
@@ -47,9 +52,10 @@ def train_net(net,
     experiment = wandb.init(project='U-Net-w-attention', resume='allow', anonymous='must')
     experiment.config.update(dict(epochs=epochs, batch_size=batch_size, learning_rate=learning_rate,
                                   val_percent=val_percent, save_checkpoint=save_checkpoint, img_scale=img_scale,
-                                  amp=amp))
+                                  amp=amp, use_attention=useatt))
 
     logging.info(f'''Starting training:
+        Attention model: {useatt}
         Epochs:          {epochs}
         Batch size:      {batch_size}
         Learning rate:   {learning_rate}
@@ -76,6 +82,8 @@ def train_net(net,
             for batch in train_loader:
                 images = batch['image']
                 true_masks = batch['mask']
+                if useatt: 
+                    attention_maps = batch['attmap']
 
                 assert images.shape[1] == net.n_channels, \
                     f'Network has been defined with {net.n_channels} input channels, ' \
@@ -84,9 +92,14 @@ def train_net(net,
 
                 images = images.to(device=device, dtype=torch.float32)
                 true_masks = true_masks.to(device=device, dtype=torch.long)
+                if useatt: 
+                    attention_maps = attention_maps.to(device=device, dtype=torch.float32)
 
                 with torch.cuda.amp.autocast(enabled=amp):
-                    masks_pred = net(images)
+                    if useatt: 
+                        masks_pred = net(images, attention_maps)
+                    else: 
+                        masks_pred = net(images)
                     loss = criterion(masks_pred, true_masks) \
                            + dice_loss(F.softmax(masks_pred, dim=1).float(),
                                        F.one_hot(true_masks, net.n_classes).permute(0, 3, 1, 2).float(),
@@ -155,6 +168,7 @@ def get_args():
     parser.add_argument('--amp', action='store_true', default=False, help='Use mixed precision')
     parser.add_argument('--bilinear', action='store_true', default=False, help='Use bilinear upsampling')
     parser.add_argument('--classes', '-c', type=int, default=2, help='Number of classes')
+    parser.add_argument('--attention', action='store_true', default=False, help='Use UNet with attention model')
 
     return parser.parse_args()
 
@@ -169,7 +183,10 @@ if __name__ == '__main__':
     # Change here to adapt to your data
     # n_channels=3 for RGB images
     # n_classes is the number of probabilities you want to get per pixel
-    net = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
+    if args.attention: 
+        net = UNetAtt(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
+    else: 
+        net = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
 
     logging.info(f'Network:\n'
                  f'\t{net.n_channels} input channels\n'
@@ -189,7 +206,8 @@ if __name__ == '__main__':
                   device=device,
                   img_scale=args.scale,
                   val_percent=args.val / 100,
-                  amp=args.amp)
+                  amp=args.amp, 
+                  useatt=args.attention)
     except KeyboardInterrupt:
         torch.save(net.state_dict(), 'INTERRUPTED.pth')
         logging.info('Saved interrupt')

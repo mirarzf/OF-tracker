@@ -1,6 +1,3 @@
-import sys
-sys.path.append('raftcore')
-
 import os
 import argparse
 
@@ -9,10 +6,11 @@ import pandas as pd
 import cv2 as cv
 import torch
 
-from utils import flow_viz, annot_viz
+from utils import annot_viz
 
-from raft import RAFT
-from utils.utils import InputPadder
+from raft.raft import RAFT
+from raft.raftutils import flow_viz
+from raft.raftutils.utils import InputPadder
 
 # torch.cuda.empty_cache()
 

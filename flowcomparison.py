@@ -1,5 +1,5 @@
-import sys
-sys.path.append('raftcore')
+# import sys
+# sys.path.append('raft')
 
 import os 
 import argparse
@@ -12,8 +12,8 @@ import torch
 
 from utils import annot_viz
 
-from raft import RAFT
-from utils.utils import InputPadder
+from raft.raft import RAFT
+from raft.raftutils.utils import InputPadder
 
 
 ### Folders 

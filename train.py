@@ -214,7 +214,9 @@ if __name__ == '__main__':
                  f'\t{"Bilinear" if net.bilinear else "Transposed conv"} upscaling')
 
     if args.load:
-        net.load_state_dict(torch.load(args.load, map_location=device))
+        modelToLoad = torch.load(args.load, map_location=device)
+        print(modelToLoad.keys())
+        net.load_state_dict(modelToLoad, strict=False)
         logging.info(f'Model loaded from {args.load}')
 
     net.to(device=device)

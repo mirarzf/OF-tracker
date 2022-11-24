@@ -1,5 +1,6 @@
 *.pyc
 __pycache__/
+extracted_frames/ 
 
 # Avoid keeping the checkpoints from training 
 

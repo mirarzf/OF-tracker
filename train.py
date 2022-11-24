@@ -217,7 +217,6 @@ if __name__ == '__main__':
 
     if args.load:
         modelToLoad = torch.load(args.load, map_location=device)
-        print(modelToLoad.keys())
         net.load_state_dict(modelToLoad, strict=False)
         logging.info(f'Model loaded from {args.load}')
 

@@ -175,10 +175,8 @@ def compareToAnnotatedPointsFlow(args):
 
                     # Compare the "annotated" optical flow to all the other optical flow vectors 
                     compres = compareFlowsToMultipleAnnotatedFlows(aplist, currentflow) 
-                    print(compres.shape)
                 else: 
                     compres = np.zeros(currentframeimg.shape[:2])
-                    print("hiya", compres.shape)
 
                 # Apply a threshold so we know which part of the image moves like the annotated points 
                 seuil = np.quantile(compres, 0.9)

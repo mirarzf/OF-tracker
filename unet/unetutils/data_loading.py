@@ -38,7 +38,8 @@ class AttentionDataset(Dataset):
         pil_img = pil_img.resize((newW, newH), resample=Image.NEAREST if is_mask else Image.BICUBIC)
         img_ndarray = np.asarray(pil_img)
         if is_mask: 
-            img_ndarray = np.where(img_ndarray == 1 or img_ndarray == 2, 255, 0)
+            print(img_ndarray.shape)
+            img_ndarray = np.where((img_ndarray == 1) | (img_ndarray == 2), 255, 0)
 
         if not is_mask:
             if img_ndarray.ndim == 2:

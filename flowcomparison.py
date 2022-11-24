@@ -181,8 +181,8 @@ def compareToAnnotatedPointsFlow(args):
                 # Apply a threshold so we know which part of the image moves like the annotated points 
                 seuil = np.quantile(compres, 0.9)
                 # seuil = 0.9
-                # print("Le seuil est : ", seuil)
-                # compres = np.where(compres < seuil, 0, compres)
+                print("Le seuil est : ", seuil)
+                compres = np.where(compres < seuil, 0, compres)
                 compres *= 255
                 compres = np.expand_dims(compres, axis = -1)
                 compres = np.concatenate((compres, compres, compres), axis = -1)

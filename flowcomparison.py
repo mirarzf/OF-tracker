@@ -85,7 +85,7 @@ def compareToAnnotatedPointsFlow(args):
     
     ## SET THE ARGUMENTS FROM THE PARSER 
     annotatedpoints = args.dataset 
-    annotatedpoints = "centerpointstest.csv"
+    # annotatedpoints = "centerpointstest.csv"
 
     video_folder = args.videofolder 
 
@@ -123,6 +123,7 @@ def compareToAnnotatedPointsFlow(args):
             print(outputname)
             fourcc = cv.VideoWriter_fourcc(*'mp4v')
             fps = cap.get(cv.CAP_PROP_FPS)
+            print("FPS", fps)
             # Initialize the padder for later and give the correct width and height 
             frame_width_old = int(scale*cap.get(cv.CAP_PROP_FRAME_WIDTH)) 
             frame_height_old = int(scale*cap.get(cv.CAP_PROP_FRAME_HEIGHT)) 
@@ -147,10 +148,9 @@ def compareToAnnotatedPointsFlow(args):
                 j, i = int(j*scale)+padder._pad[0], int(i*scale)+padder._pad[2]
                 aplist.append((i,j))
 
-            # Create random colors list for the annotated points visualization 
+            # Check number of points that are annotated
             n = len(aplist)
             print(aplist)
-            randomcolors = [np.random.randint(256, size=3) for index in range(n)]
             print("# annotated points in video {video_id} : {n}".format(n=n, video_id = video_id))
 
             # Capture the first two frames
@@ -163,7 +163,7 @@ def compareToAnnotatedPointsFlow(args):
             padder = InputPadder(beforeframe.shape)
             beforeframe = padder.pad(beforeframe)[0]
 
-            while ret and len(aplist) > 0: 
+            while ret: # and len(aplist) > 0: 
                 # Prep the current frame for optical flow retrieving
                 currentframeimg = annot_viz.load_image(currentframeimg, (frame_width, frame_height))
                 currentframe = padder.pad(currentframeimg)[0]
@@ -191,14 +191,8 @@ def compareToAnnotatedPointsFlow(args):
 
                 # Get the new vector of comparison 
                 aplist, inFrameList = annot_viz.calculateNewPosition(aplist, currentflow)
-                # Update the color list to only keep the points in frame 
-                updaterandomcolors = []
-                for bool, color in zip(inFrameList, randomcolors): 
-                    if bool: 
-                        updaterandomcolors.append(color)
-                randomcolors = updaterandomcolors
                 
-                print("Points etant encore in frame :", len(aplist), len(randomcolors))
+                print("Points etant encore in frame :", len(aplist))
 
                 # Set new currentframe 
                 beforeframe = currentframe

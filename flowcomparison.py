@@ -123,7 +123,6 @@ def compareToAnnotatedPointsFlow(args):
             print(outputname)
             fourcc = cv.VideoWriter_fourcc(*'mp4v')
             fps = cap.get(cv.CAP_PROP_FPS)
-            print("FPS", fps)
             # Initialize the padder for later and give the correct width and height 
             frame_width_old = int(scale*cap.get(cv.CAP_PROP_FRAME_WIDTH)) 
             frame_height_old = int(scale*cap.get(cv.CAP_PROP_FRAME_HEIGHT)) 
@@ -132,7 +131,7 @@ def compareToAnnotatedPointsFlow(args):
             firstframe = annot_viz.load_image(firstframe, (frame_width_old, frame_height_old))
             print("ffshape", firstframe.shape)
             padder = InputPadder((firstframe.shape))
-            print(padder._pad)
+            # print(padder._pad)
             frame_width = frame_width_old + padder._pad[0] + padder._pad[1] 
             frame_height = frame_height_old + padder._pad[2] + padder._pad[3] 
 
@@ -163,36 +162,41 @@ def compareToAnnotatedPointsFlow(args):
             padder = InputPadder(beforeframe.shape)
             beforeframe = padder.pad(beforeframe)[0]
 
-            while ret: # and len(aplist) > 0: 
+            while ret:      
                 # Prep the current frame for optical flow retrieving
                 currentframeimg = annot_viz.load_image(currentframeimg, (frame_width, frame_height))
                 currentframe = padder.pad(currentframeimg)[0]
                 currentframeimg = currentframeimg[0].permute(1,2,0).cpu().numpy().astype('uint8')
 
-                # Retrieve the optical flow between beforeframe and currentframe 
-                flow_low, currentflow = model(beforeframe, currentframe, iters=20, test_mode=True)
-                currentflow = currentflow[0].permute(1,2,0).cpu().detach().numpy()
+                if len(aplist) > 0:         
+                    # Retrieve the optical flow between beforeframe and currentframe 
+                    flow_low, currentflow = model(beforeframe, currentframe, iters=20, test_mode=True)
+                    currentflow = currentflow[0].permute(1,2,0).cpu().detach().numpy()
 
-                # Compare the "annotated" optical flow to all the other optical flow vectors 
-                compres = compareFlowsToMultipleAnnotatedFlows(aplist, currentflow) 
+                    # Compare the "annotated" optical flow to all the other optical flow vectors 
+                    compres = compareFlowsToMultipleAnnotatedFlows(aplist, currentflow) 
+                    print(compres.shape)
+                else: 
+                    compres = np.zeros(currentframeimg.shape[:2])
+                    print("hiya", compres.shape)
 
-                # Apply a threshold so we know which part of the image moves like the annotated point 
+                # Apply a threshold so we know which part of the image moves like the annotated points 
                 seuil = np.quantile(compres, 0.9)
                 # seuil = 0.9
-                print("Le seuil est : ", seuil)
+                # print("Le seuil est : ", seuil)
                 # compres = np.where(compres < seuil, 0, compres)
                 compres *= 255
                 compres = np.expand_dims(compres, axis = -1)
                 compres = np.concatenate((compres, compres, compres), axis = -1)
                 compres = np.uint8(compres)
                 cv.imshow("output", compres)
-                cv.waitKey(10)
+                cv.waitKey(1)
                 output.write(compres)
 
                 # Get the new vector of comparison 
                 aplist, inFrameList = annot_viz.calculateNewPosition(aplist, currentflow)
                 
-                print("Points etant encore in frame :", len(aplist))
+                # print("Points etant encore in frame :", len(aplist))
 
                 # Set new currentframe 
                 beforeframe = currentframe
@@ -201,7 +205,7 @@ def compareToAnnotatedPointsFlow(args):
             cap.release()
             output.release() 
 
-        print(video_id, len(aplist))
+        print(f"Points etant encore in frame dans la video {video_id} : {len(aplist)}")
 
 
 if __name__ == '__main__':

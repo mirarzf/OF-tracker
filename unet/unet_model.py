@@ -36,7 +36,6 @@ class UNet(nn.Module):
         x4 = self.down3(x3)
         x5 = self.down4(x4)
 
-        print(x5.size(), x4.size())
         x = self.up1(x5, x4)
         x = self.up2(x, x3)
         x = self.up3(x, x2)

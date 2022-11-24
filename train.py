@@ -16,10 +16,10 @@ from unet.unetutils.dice_score import dice_loss
 from evaluate import evaluate
 from unet.unet_model import UNet, UNetAtt
 
-# dir_img = Path('./data/imgs/')
-dir_img = Path('D:\\Master Thesis\\data\\EgoHOS\\train\\image')
-# dir_mask = Path('./data/masks/')
-dir_mask = Path('D:\\Master Thesis\\data\\EgoHOS\\train\\label')
+dir_img = Path('./data/imgs/')
+# dir_img = Path('D:\\Master Thesis\\data\\EgoHOS\\train\\image')
+dir_mask = Path('./data/masks/')
+# dir_mask = Path('D:\\Master Thesis\\data\\EgoHOS\\train\\label')
 dir_attmap = Path('./data/attmaps/')
 dir_checkpointwatt = Path('./checkpoints/attention/')
 dir_checkpointwoatt = Path('./checkpoints/woattention')

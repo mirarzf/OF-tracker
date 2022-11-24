@@ -33,7 +33,7 @@ class AttentionDataset(Dataset):
         w, h = pil_img.size
         newW, newH = int(scale * w), int(scale * h)
         assert newW > 0 and newH > 0, 'Scale is too small, resized images would have no pixel'
-        newW, newH = 572, 572
+        # newW, newH = 572, 572
         # assert newW > w or newH > h, 'Input images will be upsampled due to one dimension of the image being smaller than 572'
         pil_img = pil_img.resize((newW, newH), resample=Image.NEAREST if is_mask else Image.BICUBIC)
         img_ndarray = np.asarray(pil_img)

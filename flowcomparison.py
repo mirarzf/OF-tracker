@@ -119,7 +119,7 @@ def compareToAnnotatedPointsFlow(args):
             cap = cv.VideoCapture(origvidpath)
 
             # Define output video parameters 
-            outputname = video_id + ".mp4" 
+            outputname = video_id + "_extract.mp4" 
             print(outputname)
             fourcc = cv.VideoWriter_fourcc(*'mp4v')
             fps = cap.get(cv.CAP_PROP_FPS)
@@ -138,7 +138,7 @@ def compareToAnnotatedPointsFlow(args):
             print(origvidpath, fps, frame_width, frame_height)
 
             # Define output video writer 
-            output = cv.VideoWriter(os.path.join(outputfolder, outputname), fourcc, fps, (frame_width*2, frame_height))
+            output = cv.VideoWriter(os.path.join(outputfolder, outputname), fourcc, fps, (frame_width, frame_height))
 
             # Get the coordinates of the annotated points 
             aplist = []

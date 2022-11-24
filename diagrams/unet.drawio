@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e" scale="1" border="5">
     <diagram name="Alpha" id="IB-9P4p-zrTP8aizsk2N">
-        <mxGraphModel dx="2857" dy="1388" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" background="#CCCCCC" math="0" shadow="0">
+        <mxGraphModel dx="2068" dy="1052" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" background="#CCCCCC" math="0" shadow="0">
             <root>
                 <mxCell id="5TGKIWIvr6A958GH1Mqz-0"/>
                 <mxCell id="5TGKIWIvr6A958GH1Mqz-1" parent="5TGKIWIvr6A958GH1Mqz-0"/>
@@ -294,8 +294,8 @@
                         <mxPoint x="70" y="80.5" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="5TGKIWIvr6A958GH1Mqz-63" value="Copy and crop" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontColor=#333333;" parent="5TGKIWIvr6A958GH1Mqz-59" vertex="1">
-                    <mxGeometry x="80" y="70" width="90" height="20" as="geometry"/>
+                <mxCell id="5TGKIWIvr6A958GH1Mqz-63" value="Copy" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontColor=#333333;" parent="5TGKIWIvr6A958GH1Mqz-59" vertex="1">
+                    <mxGeometry x="80" y="70" width="40" height="20" as="geometry"/>
                 </mxCell>
                 <mxCell id="5TGKIWIvr6A958GH1Mqz-64" value="" style="shape=flexArrow;endArrow=classic;html=1;endWidth=10.333333333333334;endSize=3.61;fillColor=#a20025;strokeColor=#6F0000;" parent="5TGKIWIvr6A958GH1Mqz-59" edge="1">
                     <mxGeometry width="50" height="50" relative="1" as="geometry">
@@ -351,8 +351,8 @@
                         <mxPoint x="60" y="360" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="5TGKIWIvr6A958GH1Mqz-197" value="Crop and duplicate feature maps" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontColor=#333333;" parent="5TGKIWIvr6A958GH1Mqz-59" vertex="1">
-                    <mxGeometry x="80" y="350" width="190" height="20" as="geometry"/>
+                <mxCell id="5TGKIWIvr6A958GH1Mqz-197" value="Duplicate feature maps" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontColor=#333333;" parent="5TGKIWIvr6A958GH1Mqz-59" vertex="1">
+                    <mxGeometry x="80" y="350" width="140" height="20" as="geometry"/>
                 </mxCell>
                 <mxCell id="5TGKIWIvr6A958GH1Mqz-76" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#cce5ff;strokeColor=#36393d;" parent="5TGKIWIvr6A958GH1Mqz-1" vertex="1">
                     <mxGeometry x="220" y="600" width="10" height="160" as="geometry"/>

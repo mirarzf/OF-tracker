@@ -4,6 +4,7 @@ import numpy as np
 import os 
 from pathlib import Path
 
-dir = Path('data/attmaps')
-name = 's2_hotdog_0000000780'
-print(list(dir.glob(name + '*.*')))
+best = 47
+loss = 48 
+best = loss if loss < best else best 
+print(best)

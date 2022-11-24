@@ -30,6 +30,7 @@ def train_net(net,
               learning_rate: float = 1e-5,
               val_percent: float = 0.1,
               save_checkpoint: bool = True,
+              save_best_checkpoint: bool = True,
               img_scale: float = 0.5,
               amp: bool = False, 
               useatt: bool = False):
@@ -160,6 +161,17 @@ def train_net(net,
             Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
             torch.save(net.state_dict(), str(dir_checkpoint / 'checkpoint_epoch{}.pth'.format(epoch)))
             logging.info(f'Checkpoint {epoch} saved!')
+        
+        # 7. (Optional) Save best model 
+        if epoch == 1: 
+            best_loss = epoch_loss 
+            best_ckpt = 1 
+        else: 
+            if best_loss < epoch_loss: 
+                best_loss = epoch_loss 
+                best_ckpt = epoch
+    
+    return best_ckpt 
 
 
 def get_args():
@@ -190,6 +202,7 @@ if __name__ == '__main__':
     # Change here to adapt to your data
     # n_channels=3 for RGB images
     # n_classes is the number of probabilities you want to get per pixel
+    # if the model with attention is used, a different model will be loaded 
     if args.attention: 
         net = UNetAtt(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
     else: 
@@ -206,15 +219,17 @@ if __name__ == '__main__':
 
     net.to(device=device)
     try:
-        train_net(net=net,
-                  epochs=args.epochs,
-                  batch_size=args.batch_size,
-                  learning_rate=args.lr,
-                  device=device,
-                  img_scale=args.scale,
-                  val_percent=args.val / 100,
-                  amp=args.amp, 
-                  useatt=args.attention)
+        best_ckpt = train_net(
+            net=net,
+            epochs=args.epochs,
+            batch_size=args.batch_size,
+            learning_rate=args.lr,
+            device=device,
+            img_scale=args.scale,
+            val_percent=args.val / 100,
+            amp=args.amp, 
+            useatt=args.attention)
+        logging.info(f'Best model is found at checkpoint #{best_ckpt}.')
     except KeyboardInterrupt:
         torch.save(net.state_dict(), 'INTERRUPTED.pth')
         logging.info('Saved interrupt')

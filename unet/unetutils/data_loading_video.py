@@ -7,15 +7,14 @@ import numpy as np
 import torch
 from PIL import Image
 from torch.utils.data import Dataset
+import cv2 as cv 
 
 
 class AttentionDataset(Dataset): 
-    def __init__(self, images_dir: str, masks_dir: str, scale: float = 1.0, mask_suffix: str = '', attmaps_dir: str = '', withatt: bool = True):
+    def __init__(self, video_path: str, masks_dir: str, scale: float = 1.0, mask_suffix: str = '', withatt: bool = True):
         self.withatt = withatt
 
-        self.images_dir = Path(images_dir)
         self.masks_dir = Path(masks_dir)
-        self.attmaps_dir = Path(attmaps_dir)
         assert 0 < scale <= 1, 'Scale must be between 0 and 1'
         self.scale = scale
         self.mask_suffix = mask_suffix
@@ -100,8 +99,3 @@ class AttentionDataset(Dataset):
 class BasicDataset(AttentionDataset): 
     def __init__(self, images_dir: str, masks_dir: str, scale: float = 1, mask_suffix: str = '', attmaps_dir: str = '', withatt: bool = True):
         super().__init__(images_dir, masks_dir, scale, mask_suffix, attmaps_dir, withatt=False)
-
-
-class CarvanaDataset(BasicDataset):
-    def __init__(self, images_dir, masks_dir, scale=1):
-        super().__init__(images_dir, masks_dir, scale, mask_suffix='_mask')

@@ -34,9 +34,9 @@ def train_net(net,
               useatt: bool = False):
     # 1. Create dataset
     if useatt: 
-        dataset = AttentionDataset(images_dir=dir_img, masks_dir=dir_mask, attmaps_dir=dir_attmap, scale=img_scale)
+        dataset = AttentionDataset(images_dir=dir_img, masks_dir=dir_mask, scale=img_scale, attmaps_dir=dir_attmap)
     else: 
-        dataset = BasicDataset(dir_img, dir_mask, img_scale)
+        dataset = BasicDataset(images_dir=dir_img, masks_dir=dir_mask, scale=img_scale)
 
     # 2. Split into train / validation partitions
     n_val = int(len(dataset) * val_percent)
@@ -132,7 +132,7 @@ def train_net(net,
                             if not torch.isinf(value.grad).any():
                                 histograms['Gradients/' + tag] = wandb.Histogram(value.grad.data.cpu())
 
-                        val_score = evaluate(net, val_loader, device)
+                        val_score = evaluate(net, val_loader, device, useatt=useatt)
                         scheduler.step(val_score)
 
                         logging.info('Validation Dice score: {}'.format(val_score))

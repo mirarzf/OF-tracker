@@ -5,7 +5,7 @@ from tqdm import tqdm
 from unet.unetutils.dice_score import multiclass_dice_coeff, dice_coeff
 
 
-def evaluate(net, dataloader, device):
+def evaluate(net, dataloader, device, useatt=False):
     net.eval()
     num_val_batches = len(dataloader)
     dice_score = 0
@@ -13,6 +13,9 @@ def evaluate(net, dataloader, device):
     # iterate over the validation set
     for batch in tqdm(dataloader, total=num_val_batches, desc='Validation round', unit='batch', leave=False):
         image, mask_true = batch['image'], batch['mask']
+        if useatt: 
+            attmap = batch['attmap']
+            attmap = attmap.to(device=device, dtype=torch.float32)
         # move images and labels to correct device and type
         image = image.to(device=device, dtype=torch.float32)
         mask_true = mask_true.to(device=device, dtype=torch.long)
@@ -20,7 +23,10 @@ def evaluate(net, dataloader, device):
 
         with torch.no_grad():
             # predict the mask
-            mask_pred = net(image)
+            if useatt: 
+                mask_pred = net(image, attmap)
+            else: 
+                mask_pred = net(image)
 
             # convert to one-hot format
             if net.n_classes == 1:

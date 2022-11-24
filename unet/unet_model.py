@@ -36,6 +36,7 @@ class UNet(nn.Module):
         x4 = self.down3(x3)
         x5 = self.down4(x4)
 
+        print(x5.size(), x4.size())
         x = self.up1(x5, x4)
         x = self.up2(x, x3)
         x = self.up3(x, x2)
@@ -93,13 +94,12 @@ class UNetAtt(nn.Module):
         attmap1 = self.maxpool(attmap)
         attmap2 = self.maxpool(attmap1)
         attmap3 = self.maxpool(attmap2)
-        attmap4 = self.maxpool(attmap3)
 
-        # Attention modules 
-        attres1 = self.att2(attmap1, x1)
-        attres2 = self.att2(attmap2, x2)
-        attres3 = self.att2(attmap3, x3)
-        attres4 = self.att1(attmap4, x4)
+        # Attention module results 
+        attres1 = self.att2(attmap, x1)
+        attres2 = self.att2(attmap1, x2)
+        attres3 = self.att2(attmap2, x3)
+        attres4 = self.att1(attmap3, x4)
 
         # Path up 
         x = self.up1(x5, attres4)

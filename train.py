@@ -19,7 +19,8 @@ from unet.unet_model import UNet, UNetAtt
 dir_img = Path('./data/imgs/')
 dir_mask = Path('./data/masks/')
 dir_attmap = Path('./data/attmaps/')
-dir_checkpoint = Path('./checkpoints/')
+dir_checkpointwatt = Path('./checkpoints/attention/')
+dir_checkpointwoatt = Path('./checkpoints/woattention')
 
 
 def train_net(net,
@@ -149,7 +150,13 @@ def train_net(net,
                             **histograms
                         })
 
+        # 6. (Optional) Save checkpoint at each epoch 
         if save_checkpoint:
+            if useatt: 
+                dir_checkpoint = dir_checkpointwatt 
+            else: 
+                dir_checkpoint = dir_checkpointwoatt
+            
             Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
             torch.save(net.state_dict(), str(dir_checkpoint / 'checkpoint_epoch{}.pth'.format(epoch)))
             logging.info(f'Checkpoint {epoch} saved!')

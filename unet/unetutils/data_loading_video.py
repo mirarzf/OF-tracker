@@ -10,7 +10,7 @@ from torch.utils.data import Dataset
 import cv2 as cv 
 
 
-class AttentionDataset(Dataset): 
+class AttentionDatasetVideo(Dataset): 
     def __init__(self, video_path: str, masks_dir: str, scale: float = 1.0, mask_suffix: str = '', withatt: bool = True):
         self.withatt = withatt
 
@@ -96,6 +96,6 @@ class AttentionDataset(Dataset):
 
         return retdict
 
-class BasicDataset(AttentionDataset): 
+class BasicDatasetVideo(AttentionDatasetVideo): 
     def __init__(self, images_dir: str, masks_dir: str, scale: float = 1, mask_suffix: str = '', attmaps_dir: str = '', withatt: bool = True):
         super().__init__(images_dir, masks_dir, scale, mask_suffix, attmaps_dir, withatt=False)

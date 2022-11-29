@@ -169,7 +169,8 @@ def train_net(net,
             best_loss = epoch_loss 
             best_ckpt = 1 
         else: 
-            if best_loss < epoch_loss: 
+            print(best_loss, epoch_loss)
+            if epoch_loss < best_loss: 
                 best_loss = epoch_loss 
                 best_ckpt = epoch
     

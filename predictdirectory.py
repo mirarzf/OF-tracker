@@ -1,25 +1,53 @@
 import os 
 from pathlib import Path
 import subprocess
+import logging 
 
-# imgdir = Path("../data/KU/frames")
-# maskdir = Path("../data/KU/masks")
-
+# CHOOSE INPUT DIRECTORIES 
 imgdir = Path("../data/GTEA/frames")
+attmapdir = None # Path("./")
+outdir = Path("./results")
 
-# imgfilenames = [os.path.join(imgdir, f) for f in os.listdir(maskdir) if "mirrored" not in f]
-# maskfilenames = [os.path.join(maskdir, f) for f in os.listdir(maskdir) if "mirrored" not in f]
+logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+logging.info(f'The directory for input images is {imgdir}. ')
+if attmapdir != None: 
+    logging.info(f'The directory for input attention maps is {attmapdir}. ')
+logging.info(f'The directory for output prediction maps is {outdir}. ')
 
-
+# SORT FILENAMES FOR INPUT 
 imgfilenames = [os.path.join(imgdir, f) for f in os.listdir(imgdir) if "s4" in f]
-
 imgfilenames.sort()
-# maskfilenames.sort()
-# print(imgfilenames[:3], len(imgfilenames), len(maskfilenames))
 
+if attmapdir != None: 
+    attmapnames = [os.path.join(attmapdir, os.path.basename(imgfilename)) for imgfilename in imgfilenames]
+    attmapnames.sort()
 
-os.environ['KMP_DUPLICATE_LIB_OK']='True'
-n = len(imgfilenames)
-for imgfilename in imgfilenames: 
-    print(imgfilename)
-    subprocess.run(["python", "predict.py", "--model", Path("./checkpoints/gtea_rgb_bs16_ckp5.pth"), "-i", imgfilename, '-o', os.path.join(Path("./results/"), os.path.basename(imgfilename))])
+logging.info(f'There are {len(imgfilenames)} input images. ')
+
+# START THE COMMAND 
+if attmapdir != None: 
+    logging.info(f'The UNet model with attention is being used. ')
+else: 
+    logging.info(f'The standard UNet model is being used. ')
+
+ckp = Path("./checkpoints/tGTEA_bs16_e10.pth")
+cmd = ["python", "predict.py", "--model", ckp]
+logging.info(f'The model loads the weights from {ckp}. ')
+
+# ADD INPUT IMAGES 
+cmd.append('-i')
+cmd += imgfilenames
+
+# ADD INPUT ATTENTION MAPS 
+if attmapdir != None: 
+    cmd.append('-a')
+    cmd += [os.path.join(outdir, os.path.basename(imgfilename)) for imgfilename in imgfilenames]
+
+# ADD OUTPUT FILENAMES 
+cmd.append('-o')
+cmd += [os.path.join(outdir, os.path.basename(imgfilename)) for imgfilename in imgfilenames]
+
+# RUN THE COMMAND 
+subprocess.run(cmd)
+
+logging.info(f'Prediction complete! ')

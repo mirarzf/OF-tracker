@@ -38,7 +38,7 @@ logging.info(f'The model loads the weights from {ckp}. ')
 cmd.append('-i')
 cmd += imgfilenames
 
-# ADD INPUT ATTENTION MAPS 
+# ADD INPUT ATTENTION MAPS (IF PRESENT IN INPUT)
 if attmapdir != None: 
     cmd.append('-a')
     cmd += [os.path.join(outdir, os.path.basename(imgfilename)) for imgfilename in imgfilenames]

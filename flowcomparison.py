@@ -85,7 +85,7 @@ def compareToAnnotatedPointsFlow(args):
     
     ## SET THE ARGUMENTS FROM THE PARSER 
     annotatedpoints = args.dataset 
-    # annotatedpoints = "centerpointstest.csv"
+    annotatedpoints = "centerpointstest.csv"
 
     video_folder = args.videofolder 
 
@@ -179,10 +179,10 @@ def compareToAnnotatedPointsFlow(args):
                     compres = np.zeros(currentframeimg.shape[:2])
 
                 # Apply a threshold so we know which part of the image moves like the annotated points 
-                seuil = np.quantile(compres, 0.9)
+                seuil = np.quantile(compres, 0.75)
                 # seuil = 0.9
                 print("Le seuil est : ", seuil)
-                compres = np.where(compres < seuil, 0, compres)
+                # compres = np.where(compres < seuil, 0, compres)
                 compres *= 255
                 compres = np.expand_dims(compres, axis = -1)
                 compres = np.concatenate((compres, compres, compres), axis = -1)

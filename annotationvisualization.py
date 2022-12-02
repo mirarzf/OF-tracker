@@ -25,7 +25,7 @@ def showAnnotatedPointsFlow(args):
 
     ## SET THE ARGUMENTS FROM THE PARSER 
     annotatedpoints = args.dataset
-    annotatedpoints = "centerpointstest.csv"
+    # annotatedpoints = "centerpointstest.csv"
 
     video_folder = args.videofolder
 
@@ -80,7 +80,7 @@ def showAnnotatedPointsFlow(args):
             # Define output video writer 
             output = cv.VideoWriter(os.path.join(outputfolder, outputname), fourcc, fps, (frame_width*2, frame_height))
 
-            # Get the coordinates of the annotated points 
+             # Get the coordinates of the annotated points 
             aplist = []
             for index, row in partdf.iterrows(): 
                 j, i = row["x_coord"], row["y_coord"]

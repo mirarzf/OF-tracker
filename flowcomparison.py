@@ -10,7 +10,7 @@ import numpy as np
 import cv2 as cv 
 import torch
 
-from utils import annot_viz
+from utils import annot_viz, flow_comp
 
 from raft.raft import RAFT
 from raft.raftutils.utils import InputPadder
@@ -23,69 +23,73 @@ model_folder = "C:\\Users\\hvrl\\Documents\\RAFT-master\\models"
 ### Main code 
 DEVICE = 'cuda'
 
-def compareFlowsToAnnotatedFlow(apcoord, flow): 
-    '''
-    In: 
-    apcoord: (x,y) coordinates of the annotated point. We compare the optical flow 
-    in the complete image to the optical flow at this point. 
-    flow: numpy array of shape (height, width, 2) corresponding to the optical flow 
+# def compareFlowsToAnnotatedFlow(aplist, flow): 
+#     '''
+#     In: 
+#     aplist: (x,y,type) with x, y coordinates of the annotated point. We compare the optical flow 
+#     in the complete image to the optical flow at this point. type describes the type of the annotated point: background or hand. 
+#     flow: numpy array of shape (height, width, 2) corresponding to the optical flow 
 
-    Out: 
-    compdot: numpy array of shape (height, width) with values between 0 and 1 
-    '''
+#     Out: 
+#     compdot: numpy array of shape (height, width) with values between 0 and 1 
+#     '''
+#     apcoord = aplist[:2]
 
-    norms = np.sqrt(flow[:,:,0]**2 + flow[:,:,1]**2)
-    normapflow = norms[apcoord[0], apcoord[1]]
+#     norms = np.sqrt(flow[:,:,0]**2 + flow[:,:,1]**2)
+#     normapflow = norms[apcoord[0], apcoord[1]]
 
-    apunitmat = flow[apcoord[0], apcoord[1],:]*np.ones(flow.shape)
+#     apunitmat = flow[apcoord[0], apcoord[1],:]*np.ones(flow.shape)
 
-    compdot = np.sum(apunitmat*flow, axis=2)/norms
-    compdot /= normapflow
-    # print(compdot.shape)
-    # print("compdot result check : ", compdot[apcoord[0], apcoord[1]])
+#     compdot = np.sum(apunitmat*flow, axis=2)/norms
+#     compdot /= normapflow
+#     # print(compdot.shape)
+#     # print("compdot result check : ", compdot[apcoord[0], apcoord[1]])
 
-    # If the calculations are correct, values should be between 1 and -1. 
-    # But because of the approximations, the maximum and minimum values found in the 
-    # comparison matrix can be higher. 
-    mincompdot = compdot.min()
-    if mincompdot > -1: 
-        mincompdot = -1 
-    maxcompdot = compdot.max()
-    if maxcompdot < 1: 
-        maxcompdot = 1
-    actualrange = maxcompdot - mincompdot 
+#     # If the calculations are correct, values should be between 1 and -1. 
+#     # But because of the approximations, the maximum and minimum values found in the 
+#     # comparison matrix can be higher. 
+#     mincompdot = compdot.min()
+#     if mincompdot > -1: 
+#         mincompdot = -1 
+#     maxcompdot = compdot.max()
+#     if maxcompdot < 1: 
+#         maxcompdot = 1
+#     actualrange = maxcompdot - mincompdot 
     
-    compdot = compdot - mincompdot*np.ones(compdot.shape)
-    compdot /= actualrange
-    # print(mincompdot, maxcompdot, actualrange)
-    # print("compdot result check : ", compdot[apcoord[0], apcoord[1]])
+#     compdot = compdot - mincompdot*np.ones(compdot.shape)
+#     compdot /= actualrange
+#     # print(mincompdot, maxcompdot, actualrange)
+#     # print("compdot result check : ", compdot[apcoord[0], apcoord[1]])
 
-    return compdot 
+#     if aplist[2] == 0: 
+#         return np.ones(compdot.shape)-compdot
 
-def compareFlowsToMultipleAnnotatedFlows(apcoordlist, flow): 
-    '''
-    In: 
-    apcoordlist: list of (x,y) (pseudo-)annotated points to track. 
-    flow: vector field repsenting the optical flow. 
+#     return compdot 
 
-    Out: 
-    compdotsum: numpy array of shape (height, width) with values between 0 and 1, 
-    result of the weighted sum of the comparison maps of the optical flow field with each annotated point flow vector. 
-    '''
+# def compareFlowsToMultipleAnnotatedFlows(aplist, flow): 
+#     '''
+#     In: 
+#     aplist: list of (x,y,type) (pseudo-)annotated points to track. 
+#     flow: vector field repsenting the optical flow. 
 
-    compdotreslist = []
-    for coord in apcoordlist: 
-        compdotreslist.append(compareFlowsToAnnotatedFlow(coord, flow))
-    compdotsum = np.sum(np.array(compdotreslist), axis=0)/len(apcoordlist)
+#     Out: 
+#     compdotsum: numpy array of shape (height, width) with values between 0 and 1, 
+#     result of the weighted sum of the comparison maps of the optical flow field with each annotated point flow vector. 
+#     '''
 
-    return compdotsum
+#     compdotreslist = []
+#     for coord in aplist: 
+#         compdotreslist.append(compareFlowsToAnnotatedFlow(coord, flow))
+#     compdotsum = np.sum(np.array(compdotreslist), axis=0)/len(aplist)
+
+#     return compdotsum
 
 def compareToAnnotatedPointsFlow(args): 
 
     
     ## SET THE ARGUMENTS FROM THE PARSER 
     annotatedpoints = args.dataset 
-    # annotatedpoints = "centerpointstest.csv"
+    annotatedpoints = "centerpointstest.csv"
 
     video_folder = args.videofolder 
 
@@ -140,12 +144,15 @@ def compareToAnnotatedPointsFlow(args):
             # Define output video writer 
             output = cv.VideoWriter(os.path.join(outputfolder, outputname), fourcc, fps, (frame_width, frame_height))
 
-            # Get the coordinates of the annotated points 
+            # Get the coordinates of the annotated points and their type 
+            # 0 : background 
+            # 1 : left hand 
+            # 2 : right hand 
             aplist = []
             for index, row in partdf.iterrows(): 
-                j, i = row["x_coord"], row["y_coord"]
+                j, i, type = row["x_coord"], row["y_coord"], row["type"]
                 j, i = int(j*scale)+padder._pad[0], int(i*scale)+padder._pad[2]
-                aplist.append((i,j))
+                aplist.append((i,j,type))
 
             # Check number of points that are annotated
             n = len(aplist)
@@ -174,7 +181,7 @@ def compareToAnnotatedPointsFlow(args):
                     currentflow = currentflow[0].permute(1,2,0).cpu().detach().numpy()
 
                     # Compare the "annotated" optical flow to all the other optical flow vectors 
-                    compres = compareFlowsToMultipleAnnotatedFlows(aplist, currentflow) 
+                    compres = flow_comp.compareFlowsToMultipleAnnotatedFlows(aplist, currentflow) 
                 else: 
                     compres = np.zeros(currentframeimg.shape[:2])
 

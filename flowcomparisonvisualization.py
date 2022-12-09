@@ -10,9 +10,10 @@ import numpy as np
 import cv2 as cv 
 import torch
 
-from utils import annot_viz
+from utils import annot_viz, flow_comp
 
 from raft.raft import RAFT
+from raft.raftutils import flow_viz
 from raft.raftutils.utils import InputPadder
 
 
@@ -23,69 +24,12 @@ model_folder = "C:\\Users\\hvrl\\Documents\\RAFT-master\\models"
 ### Main code 
 DEVICE = 'cuda'
 
-def compareFlowsToAnnotatedFlow(apcoord, flow): 
-    '''
-    In: 
-    apcoord: (x,y) coordinates of the annotated point. We compare the optical flow 
-    in the complete image to the optical flow at this point. 
-    flow: numpy array of shape (height, width, 2) corresponding to the optical flow 
-
-    Out: 
-    compdot: numpy array of shape (height, width) with values between 0 and 1 
-    '''
-
-    norms = np.sqrt(flow[:,:,0]**2 + flow[:,:,1]**2)
-    normapflow = norms[apcoord[0], apcoord[1]]
-
-    apunitmat = flow[apcoord[0], apcoord[1],:]*np.ones(flow.shape)
-
-    compdot = np.sum(apunitmat*flow, axis=2)/norms
-    compdot /= normapflow
-    # print(compdot.shape)
-    # print("compdot result check : ", compdot[apcoord[0], apcoord[1]])
-
-    # If the calculations are correct, values should be between 1 and -1. 
-    # But because of the approximations, the maximum and minimum values found in the 
-    # comparison matrix can be higher. 
-    mincompdot = compdot.min()
-    if mincompdot > -1: 
-        mincompdot = -1 
-    maxcompdot = compdot.max()
-    if maxcompdot < 1: 
-        maxcompdot = 1
-    actualrange = maxcompdot - mincompdot 
-    
-    compdot = compdot - mincompdot*np.ones(compdot.shape)
-    compdot /= actualrange
-    # print(mincompdot, maxcompdot, actualrange)
-    # print("compdot result check : ", compdot[apcoord[0], apcoord[1]])
-
-    return compdot 
-
-def compareFlowsToMultipleAnnotatedFlows(apcoordlist, flow): 
-    '''
-    In: 
-    apcoordlist: list of (x,y) (pseudo-)annotated points to track. 
-    flow: vector field repsenting the optical flow. 
-
-    Out: 
-    compdotsum: numpy array of shape (height, width) with values between 0 and 1, 
-    result of the weighted sum of the comparison maps of the optical flow field with each annotated point flow vector. 
-    '''
-
-    compdotreslist = []
-    for coord in apcoordlist: 
-        compdotreslist.append(compareFlowsToAnnotatedFlow(coord, flow))
-    compdotsum = np.sum(np.array(compdotreslist), axis=0)/len(apcoordlist)
-
-    return compdotsum
-
 def compareToAnnotatedPointsFlow(args): 
 
     
     ## SET THE ARGUMENTS FROM THE PARSER 
     annotatedpoints = args.dataset 
-    # annotatedpoints = "centerpointstest.csv"
+    annotatedpoints = "centerpointstest.csv"
 
     video_folder = args.videofolder 
 
@@ -140,12 +84,15 @@ def compareToAnnotatedPointsFlow(args):
             # Define output video writer 
             output = cv.VideoWriter(os.path.join(outputfolder, outputname), fourcc, fps, (frame_width*2, frame_height))
 
-            # Get the coordinates of the annotated points 
+            # Get the coordinates of the annotated points and their type 
+            # 0 : background 
+            # 1 : left hand 
+            # 2 : right hand 
             aplist = []
             for index, row in partdf.iterrows(): 
-                j, i = row["x_coord"], row["y_coord"]
+                j, i, type = row["x_coord"], row["y_coord"], row["type"]
                 j, i = int(j*scale)+padder._pad[0], int(i*scale)+padder._pad[2]
-                aplist.append((i,j))
+                aplist.append((i,j,type))
 
             # Create random colors list for the annotated points visualization 
             n = len(aplist)
@@ -174,21 +121,37 @@ def compareToAnnotatedPointsFlow(args):
                 currentflow = currentflow[0].permute(1,2,0).cpu().detach().numpy()
 
                 # Compare the "annotated" optical flow to all the other optical flow vectors 
-                compres = compareFlowsToMultipleAnnotatedFlows(aplist, currentflow) 
+                compres = flow_comp.compareFlowsToMultipleAnnotatedFlows(aplist, currentflow) 
 
                 # Apply a threshold so we know which part of the image moves like the annotated point 
-                seuil = np.quantile(compres, 0.9)
+                seuil = np.quantile(compres, 0.5)
+                troisquart = np.quantile(compres, 0.75)
+                mid = np.quantile(compres, 0.5)
+                unquart = np.quantile(compres, 0.25)
+                moy = np.mean(compres)
                 # seuil = 0.9
-                print("Le seuil est : ", seuil)
+                # print("Le seuil est : ", seuil)
+                print("Les quantiles sont : ", compres.min(), mid, moy)
                 # compres = np.where(compres < seuil, 0, compres)
+                
+                # Prepare compres for visualization 
                 compres *= 255
                 compres = np.expand_dims(compres, axis = -1)
                 compres = np.concatenate((compres, compres, compres), axis = -1)
                 compres = np.uint8(compres)
-                compres = annot_viz.visualizePoint(compres, aplist, color=randomcolors)
-                frameimg = annot_viz.visualizePoint(currentframeimg, aplist, color=randomcolors)
-                concatenation = cv.hconcat([frameimg, compres])
-                cv.imshow("output", compres)
+                compres = annot_viz.visualizePoint(compres, [(e[0], e[1]) for e in aplist], color=randomcolors)
+
+                # Prepare flow image for visualization 
+                unscaledaplist = annot_viz.unscaledCoordlist(aplist, scale)
+                flowimg = flow_viz.flow_to_image(currentflow, convert_to_bgr=True)
+                flowimg = annot_viz.visualizePoint(flowimg, unscaledaplist, color=randomcolors, scale=scale) # multiple points 
+
+                # # Prepare frame for visualization 
+                # frameimg = annot_viz.visualizePoint(currentframeimg, [(e[0], e[1]) for e in aplist], color=randomcolors)
+
+                # Concatenation of the visualization
+                concatenation = cv.hconcat([flowimg, compres])
+                cv.imshow("output", concatenation)
                 cv.waitKey(10)
                 output.write(concatenation)
 

@@ -32,10 +32,10 @@ def visualizePoint(img, coordlist, color=[(0,0,255)], scale = 1):
         cv.circle(img, (int(j*scale),int(i*scale)), 5, (int(color[index][0]), int(color[index][1]), int(color[index][2])), 2)
     return img 
 
-def calculateNewPosition(coordlist, flow): 
+def calculateNewPosition(aplist, flow): 
     ''' 
     In: 
-    coordlist: List of annotated points coordlist [(i1, j1), (i2, j2), ..., (in, jn)] 
+    aplist: List of annotated points coordinates and their type [(i1, j1, type1), (i2, j2, type2), ..., (in, jn, typen)] 
     to calculate new positions in the next frame. 
     flow: vector field of the movements of each pixel 
     Out: 
@@ -46,11 +46,11 @@ def calculateNewPosition(coordlist, flow):
     newcoordlist, inFrame = [], []
     framewidth = flow.shape[1]
     frameheight = flow.shape[0]
-    for coord in coordlist: 
-        i, j = coord
+    for ap in aplist: 
+        i, j, type = ap
         newi, newj = i + flow[i, j, 0], j + flow[i, j, 1]
         if newi < frameheight and newj < framewidth and newi > 0 and newj > 0: 
-            newcoordlist.append((int(newi), int(newj)))
+            newcoordlist.append((int(newi), int(newj), type))
             inFrame.append(True)
         else: 
             inFrame.append(False)

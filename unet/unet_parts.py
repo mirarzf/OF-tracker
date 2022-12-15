@@ -84,16 +84,17 @@ class Attention(nn.Module):
         super().__init__()
     
     def forward(self, attmap, x): 
-        # input is 1CHW
-        diffY = attmap.size()[2] - x.size()[2]
-        diffX = attmap.size()[3] - x.size()[3]
+        # # input is 1CHW
+        # print("aaaah", attmap.size(), x.size())
+        # diffY = attmap.size()[2] - x.size()[2]
+        # diffX = attmap.size()[3] - x.size()[3]
 
-        x = F.pad(x, [diffX // 2, diffX - diffX // 2,
-                        diffY // 2, diffY - diffY // 2])
+        # x = F.pad(x, [diffX // 2, diffX - diffX // 2,
+        #                 diffY // 2, diffY - diffY // 2])
         
         # input is 1CHW
         # Repeat the attention map to obtain a feature map of input CHW similar to the gated signal 
         # The attmap.size()[0] should be 1 by default 
-        attmap.repeat(1, x.size()[1], 1, 1) 
-        
+        torch.unsqueeze(attmap, 1)
+        # attmap = attmap.repeat(1, x.size()[1], 1, 1) 
         return attmap*x

@@ -38,7 +38,10 @@ class AttentionDataset(Dataset):
         pil_img = pil_img.resize((newW, newH), resample=Image.NEAREST if is_mask else Image.BICUBIC)
         img_ndarray = np.asarray(pil_img)
         if is_mask: 
-            img_ndarray = np.where((img_ndarray == 1) | (img_ndarray == 2), 1, 0)[:,:,0] # Last index is to only keep one layer of image and not three channels for R, G and B.  
+            # img_ndarray = np.where((img_ndarray == 1) | (img_ndarray == 2), 1, 0)[:,:,0] # Last index is to only keep one layer of image and not three channels for R, G and B.  
+            # img_ndarray = np.where(img_ndarray > 0.5, 1, 0)[:,:,0] # Last index is to only keep one layer of image and not three channels for R, G and B.  
+            thres = np.quantile(img_ndarray, 0.5)
+            img_ndarray = np.where(img_ndarray > thres, 1, 0)[:,:,0]
 
         if not is_mask:
             if img_ndarray.ndim == 2:
@@ -87,13 +90,14 @@ class AttentionDataset(Dataset):
         img = self.preprocess(img, self.scale, is_mask=False)
         mask = self.preprocess(mask, self.scale, is_mask=True)
         if self.withatt: 
-            attmap = self.preprocess(attmap, self.scale, is_mask=False)
+            attmap = self.preprocess(attmap, self.scale, is_mask=True)
         
         retdict = {}
         retdict['image'] = torch.as_tensor(img.copy()).float().contiguous()
         retdict['mask'] = torch.as_tensor(mask.copy()).long().contiguous()
         if self.withatt: 
             retdict['attmap'] = torch.as_tensor(attmap.copy()).float().contiguous()
+        retdict['index'] = idx+1
 
         return retdict
 

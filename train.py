@@ -17,10 +17,15 @@ from evaluate import evaluate
 from unet.unet_model import UNet, UNetAtt
 
 dir_img = Path('./data/imgs/')
+# dir_img = Path('D:\\Master Thesis\\data\\GTEA\\GTEA\\train')
 # dir_img = Path('D:\\Master Thesis\\data\\EgoHOS\\train\\image')
+
 dir_mask = Path('./data/masks/')
+# dir_mask = Path('D:\\Master Thesis\\data\\GTEA\\GTEA\\trainannot')
 # dir_mask = Path('D:\\Master Thesis\\data\\EgoHOS\\train\\label')
+
 dir_attmap = Path('./data/attmaps/')
+
 dir_checkpointwatt = Path('./checkpoints/attention/')
 dir_checkpointwoatt = Path('./checkpoints/woattention')
 
@@ -35,7 +40,8 @@ def train_net(net,
               save_best_checkpoint: bool = True,
               img_scale: float = 0.5,
               amp: bool = False, 
-              useatt: bool = False):
+              useatt: bool = False, 
+              lossframesdecay = False):
     # 1. Create dataset
     if useatt: 
         dataset = AttentionDataset(images_dir=dir_img, masks_dir=dir_mask, scale=img_scale, attmaps_dir=dir_attmap)
@@ -86,6 +92,7 @@ def train_net(net,
             for batch in train_loader:
                 images = batch['image']
                 true_masks = batch['mask']
+                index = batch['index']
                 if useatt: 
                     attention_maps = batch['attmap']
 
@@ -96,6 +103,7 @@ def train_net(net,
 
                 images = images.to(device=device, dtype=torch.float32)
                 true_masks = true_masks.to(device=device, dtype=torch.long)
+                index = index.to(device=device, dtype=torch.int)
                 if useatt: 
                     attention_maps = attention_maps.to(device=device, dtype=torch.float32)
 
@@ -104,10 +112,17 @@ def train_net(net,
                         masks_pred = net(images, attention_maps)
                     else: 
                         masks_pred = net(images)
-                    loss = criterion(masks_pred, true_masks) \
-                           + dice_loss(F.softmax(masks_pred, dim=1).float(),
-                                       F.one_hot(true_masks, net.n_classes).permute(0, 3, 1, 2).float(),
-                                       multiclass=True)
+                    
+                    if lossframesdecay: 
+                        loss = (criterion(masks_pred, true_masks) \
+                            + dice_loss(F.softmax(masks_pred, dim=1).float(),
+                                        F.one_hot(true_masks, net.n_classes).permute(0, 3, 1, 2).float(),
+                                        multiclass=True)) / index 
+                    else: 
+                        loss = criterion(masks_pred, true_masks) \
+                            + dice_loss(F.softmax(masks_pred, dim=1).float(),
+                                        F.one_hot(true_masks, net.n_classes).permute(0, 3, 1, 2).float(),
+                                        multiclass=True)
 
                 optimizer.zero_grad(set_to_none=True)
                 grad_scaler.scale(loss).backward()
@@ -191,6 +206,7 @@ def get_args():
     parser.add_argument('--bilinear', action='store_true', default=False, help='Use bilinear upsampling')
     parser.add_argument('--classes', '-c', type=int, default=2, help='Number of classes')
     parser.add_argument('--attention', action='store_true', default=False, help='Use UNet with attention model')
+    parser.add_argument('--framesdecay', action='store_true', default=False, help='Modify loss function to add the frames lack of importance')
 
     return parser.parse_args()
 
@@ -232,7 +248,8 @@ if __name__ == '__main__':
             img_scale=args.scale,
             val_percent=args.val / 100,
             amp=args.amp, 
-            useatt=args.attention)
+            useatt=args.attention, 
+            lossframesdecay=args.framesdecay)
         logging.info(f'Best model is found at checkpoint #{best_ckpt}.')
     except KeyboardInterrupt:
         torch.save(net.state_dict(), 'INTERRUPTED.pth')

@@ -18,14 +18,15 @@ def predict_img(net,
                 device,
                 scale_factor=1,
                 out_threshold=0.5, 
-                useatt: bool = False):
+                useatt: bool = False, 
+                full_attmap = None):
     net.eval()
     img = torch.from_numpy(AttentionDataset.preprocess(full_img, scale_factor, is_mask=False))
     img = img.unsqueeze(0)
     img = img.to(device=device, dtype=torch.float32)
 
     if useatt: 
-        attmap = torch.from_numpy(AttentionDataset.preprocess(full_img, scale_factor, is_mask=False))
+        attmap = torch.from_numpy(AttentionDataset.preprocess(full_attmap, scale_factor, is_mask=True))
         attmap = attmap.unsqueeze(0)
         attmap = attmap.to(device=device, dtype=torch.float32)
 
@@ -116,13 +117,16 @@ if __name__ == '__main__':
         img = Image.open(filename)
         if useatt: 
             attmap = Image.open(in_files_att[i])
+        else: 
+            attmap = None 
 
         mask = predict_img(net=net,
                            full_img=img,
                            scale_factor=args.scale,
                            out_threshold=args.mask_threshold,
                            device=device, 
-                           useatt=useatt)
+                           useatt=useatt, 
+                           full_attmap=attmap)
 
         if not args.no_save:
             out_filename = out_files[i]

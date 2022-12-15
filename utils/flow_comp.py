@@ -42,21 +42,9 @@ def compareFlowsToAnnotatedFlow(ap, flow):
         # return np.ones(compdot.shape)-compdot
         compdot *= -1
 
-    # # If the calculations are correct, values should be between -1 and 1. 
-    # # But because of the approximations, the maximum and minimum values found in the 
-    # # comparison matrix can be higher. 
-    # mincompdot = compdot.min()
-    # if mincompdot > -1: 
-    #     mincompdot = -1 
-    # maxcompdot = compdot.max()
-    # if maxcompdot < 1: 
-    #     maxcompdot = 1
-    # actualrange = maxcompdot - mincompdot 
-    
-    # compdot = compdot - mincompdot*np.ones(compdot.shape)
-    # compdot /= actualrange
-    # print(mincompdot, maxcompdot, actualrange)
-    # print("compdot result check : ", compdot[apcoord[0], apcoord[1]])
+    # If the calculations are correct, values should be between -1 and 1. 
+    # But because of the approximations, the maximum and minimum values found in the 
+    # comparison matrix can be higher. 
 
     return normalizeMat(compdot) 
 

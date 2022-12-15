@@ -40,7 +40,7 @@ class AttentionDataset(Dataset):
         if is_mask: 
             # img_ndarray = np.where((img_ndarray == 1) | (img_ndarray == 2), 1, 0)[:,:,0] # Last index is to only keep one layer of image and not three channels for R, G and B.  
             # img_ndarray = np.where(img_ndarray > 0.5, 1, 0)[:,:,0] # Last index is to only keep one layer of image and not three channels for R, G and B.  
-            thres = np.quantile(img_ndarray, 0.5)
+            thres = np.quantile(img_ndarray, 0.75)
             img_ndarray = np.where(img_ndarray > thres, 1, 0)[:,:,0]
 
         if not is_mask:

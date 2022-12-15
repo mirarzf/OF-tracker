@@ -7,8 +7,8 @@ import copy
 # CHOOSE INPUT DIRECTORIES 
 # imgdir = Path("../data/GTEA/frames")
 imgdir = Path("./data/imgs")
-attmapdir = None # Path("./")
-# attmapdir = Path("./data/attmaps")
+# attmapdir = None # Path("./")
+attmapdir = Path("./data/attmaps")
 outdir = Path("./results/unet")
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')

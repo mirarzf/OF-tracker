@@ -16,11 +16,13 @@ from unet.unetutils.dice_score import dice_loss
 from evaluate import evaluate
 from unet.unet_model import UNet, UNetAtt
 
-dir_img = Path('./data/imgs/')
+# dir_img = Path('./data/imgs/')
+dir_img = Path('D:\\Master Thesis\\data\\KU\\test')
 # dir_img = Path('D:\\Master Thesis\\data\\GTEA\\GTEA\\train')
 # dir_img = Path('D:\\Master Thesis\\data\\EgoHOS\\train\\image')
 
-dir_mask = Path('./data/masks/')
+# dir_mask = Path('./data/masks/')
+dir_mask = Path('D:\\Master Thesis\\data\\KU\\testannot')
 # dir_mask = Path('D:\\Master Thesis\\data\\GTEA\\GTEA\\trainannot')
 # dir_mask = Path('D:\\Master Thesis\\data\\EgoHOS\\train\\label')
 
@@ -78,10 +80,11 @@ def train_net(net,
     ''')
 
     # 4. Set up the optimizer, the loss, the learning rate scheduler and the loss scaling for AMP
-    optimizer = optim.RMSprop(net.parameters(), lr=learning_rate, weight_decay=1e-8, momentum=0.9)
+    optimizer = optim.RMSprop(net.parameters(), lr=learning_rate, weight_decay=1e-2, momentum=0.9) # VANILLA SETTINGS: net.parameters(), lr=learning_rate, weight_decay=1e-8, momentum=0.9
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=2)  # goal: maximize Dice score
     grad_scaler = torch.cuda.amp.GradScaler(enabled=amp)
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss() # VANILLA 
+    # criterion = nn.BCELoss() # GROUND TRUTH = SOFT MAPS 
     global_step = 0
 
     # 5. Begin training
@@ -108,21 +111,20 @@ def train_net(net,
                     attention_maps = attention_maps.to(device=device, dtype=torch.float32)
 
                 with torch.cuda.amp.autocast(enabled=amp):
-                    if useatt: 
-                        masks_pred = net(images, attention_maps)
-                    else: 
-                        masks_pred = net(images)
+                    masks_pred = net(images)
+                    if net.n_classes == 1:
+                        loss = criterion(masks_pred.squeeze(1), true_masks.float())
+                        loss += dice_loss(F.sigmoid(masks_pred.squeeze(1)), true_masks.float(), multiclass=False)
+                    else:
+                        loss = criterion(masks_pred, true_masks)
+                        loss += dice_loss(
+                            F.softmax(masks_pred, dim=1).float(),
+                            F.one_hot(true_masks, net.n_classes).permute(0, 3, 1, 2).float(),
+                            multiclass=True
+                        )
                     
                     if lossframesdecay: 
-                        loss = (criterion(masks_pred, true_masks) \
-                            + dice_loss(F.softmax(masks_pred, dim=1).float(),
-                                        F.one_hot(true_masks, net.n_classes).permute(0, 3, 1, 2).float(),
-                                        multiclass=True)) / index 
-                    else: 
-                        loss = criterion(masks_pred, true_masks) \
-                            + dice_loss(F.softmax(masks_pred, dim=1).float(),
-                                        F.one_hot(true_masks, net.n_classes).permute(0, 3, 1, 2).float(),
-                                        multiclass=True)
+                        loss /= index 
 
                 optimizer.zero_grad(set_to_none=True)
                 grad_scaler.scale(loss).backward()
@@ -167,6 +169,7 @@ def train_net(net,
                             'epoch': epoch,
                             **histograms
                         })
+        epoch_loss /= (n_train+n_val)
 
         # 6. (Optional) Save checkpoint at each epoch 
         if save_checkpoint:
@@ -184,10 +187,10 @@ def train_net(net,
             best_loss = epoch_loss 
             best_ckpt = 1 
         else: 
-            print(best_loss, epoch_loss)
             if epoch_loss < best_loss: 
-                best_loss = epoch_loss 
+                best_loss = epoch_loss
                 best_ckpt = epoch
+        print("best", best_loss, " this epoch ", epoch_loss, "\n")
     
     return best_ckpt 
 

@@ -6,9 +6,10 @@ import copy
 
 # CHOOSE INPUT DIRECTORIES 
 # imgdir = Path("../data/GTEA/frames")
-imgdir = Path("./data/imgs")
-# attmapdir = None # Path("./")
-attmapdir = Path("./data/attmaps")
+imgdir = Path('D:\\Master Thesis\\data\\KU\\test')
+# imgdir = Path("./data/imgs")
+attmapdir = None # Path("./")
+# attmapdir = Path("./data/attmaps")
 outdir = Path("./results/unet")
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
@@ -33,7 +34,7 @@ if attmapdir != None:
 else: 
     logging.info(f'The standard UNet model is being used. ')
 
-ckp = Path("./checkpoints/woattention/ptGTEA_tKU_bs1_e5.pth")
+ckp = Path("./checkpoints/woattention/tKU_bs4_e10_wde-2.pth")
 cmdbegin = ["python", "predict.py", "--model", ckp]
 logging.info(f'The model loads the weights from {ckp}. ')
 cmd = cmdbegin.copy()

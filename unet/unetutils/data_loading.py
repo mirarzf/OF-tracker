@@ -40,7 +40,8 @@ class AttentionDataset(Dataset):
         if is_mask: 
             # img_ndarray = np.where((img_ndarray == 1) | (img_ndarray == 2), 1, 0)[:,:,0] # Last index is to only keep one layer of image and not three channels for R, G and B.  
             # img_ndarray = np.where(img_ndarray > 0.5, 1, 0)[:,:,0] # Last index is to only keep one layer of image and not three channels for R, G and B.  
-            thres = np.quantile(img_ndarray, 0.75)
+            # thres = np.quantile(img_ndarray, 0.75)
+            thres = 0
             img_ndarray = np.where(img_ndarray > thres, 1, 0)[:,:,0]
 
         if not is_mask:
@@ -109,3 +110,45 @@ class BasicDataset(AttentionDataset):
 class CarvanaDataset(BasicDataset):
     def __init__(self, images_dir, masks_dir, scale=1):
         super().__init__(images_dir, masks_dir, scale, mask_suffix='_mask')
+
+class MaskDataset(AttentionDataset): 
+    def __init__(self, images_dir: str, masks_dir: str, scale: float = 1, mask_suffix: str = '', attmaps_dir: str = '', withatt: bool = True):
+        super().__init__(images_dir, masks_dir, scale, mask_suffix, attmaps_dir, withatt)
+    
+    def __getitem__(self, idx):
+        name = self.ids[idx]
+        mask_file = list(self.masks_dir.glob(name + self.mask_suffix + '.*'))
+        img_file = list(self.images_dir.glob(name + '.*'))
+        if self.withatt: 
+            attmap_file = list(self.attmaps_dir.glob(name + '.*'))
+        
+        assert len(img_file) == 1, f'Either no image or multiple images found for the ID {name}: {img_file}'
+        assert len(mask_file) == 1, f'Either no mask or multiple masks found for the ID {name}: {mask_file}.'
+        if self.withatt: 
+            assert len(attmap_file) == 1, f'Either no attention map or multiple attention maps found for the ID {name}: {attmap_file}.'
+        
+        mask = self.load(mask_file[0])
+        img = self.load(img_file[0])
+        if self.withatt: 
+            attmap = self.load(attmap_file[0])
+
+        # if self.withatt: 
+        #     assert img.size == mask.size and img.size == attmap.size, \
+        #         f'Image, mask and attention map {name} should be the same size, but are {img.size}, {mask.size} and {attmap.size}'
+        # else: 
+        #     assert img.size == mask.size, \
+        #         f'Image and mask {name} should be the same size, but are {img.size} and {mask.size}'
+
+        img = self.preprocess(img, self.scale, is_mask=True)
+        mask = self.preprocess(mask, self.scale, is_mask=True)
+        if self.withatt: 
+            attmap = self.preprocess(attmap, self.scale, is_mask=True)
+        
+        retdict = {}
+        retdict['gt'] = torch.as_tensor(img.copy()).float().contiguous()
+        retdict['mask'] = torch.as_tensor(mask.copy()).long().contiguous()
+        if self.withatt: 
+            retdict['attmap'] = torch.as_tensor(attmap.copy()).float().contiguous()
+        retdict['index'] = idx+1
+
+        return retdict

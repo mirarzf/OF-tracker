@@ -7,9 +7,6 @@ extracted_frames/
 checkpoints/
 *.pth
 
-# Avoid keeping the results 
-results/ 
-
 # Avoid keeping data 
 
 *.jpg

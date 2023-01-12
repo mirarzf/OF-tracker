@@ -93,10 +93,6 @@ def test_img(net,
             transforms.Normalize(torch.min(loss),torch.max(loss)), 
             transforms.ToPILImage()
         ])
-        # tfpred = transforms.Compose([
-        #     transforms.ToPILImage(),
-        #     transforms.ToTensor()
-        # ])
         
         loss_array = tf(loss.cpu())
         full_mask = masks_pred.cpu().squeeze()

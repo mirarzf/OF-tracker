@@ -28,7 +28,7 @@ dir_attmap = Path('./data/attmaps/')
 outdir = Path("./results/unet/celoss")
 
 dir_model = "./checkpoints/"
-defaultmodelname = "woattention/tKU_bs4_e5_new.pth"
+defaultmodelname = "woattention/tKU_bs4_e10.pth"
 modelpath = Path(dir_model + defaultmodelname)
 
 def test_img(net,

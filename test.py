@@ -26,9 +26,10 @@ dir_mask = Path('D:\\Master Thesis\\data\\KU\\testannot')
 dir_attmap = Path('./data/attmaps/')
 
 outdir = Path("./results/unet/celoss")
+outdirpred = Path("./results/unet/pred")
 
 dir_model = "./checkpoints/"
-defaultmodelname = "woattention/tKU_bs4_e10.pth"
+defaultmodelname = "woattention/tKU_bs4_e10_new.pth"
 modelpath = Path(dir_model + defaultmodelname)
 
 def test_img(net,
@@ -53,6 +54,8 @@ def test_img(net,
     # 4. Create results saving folder 
     outputfolder = outdir / modelname
     Path.mkdir(outputfolder, exist_ok=True)
+    outputfolderpred = outdirpred / modelname
+    Path.mkdir(outputfolderpred, exist_ok=True)
 
     # 5. Begin prediction 
     for batch in data_loader: 
@@ -80,21 +83,41 @@ def test_img(net,
             masks_pred = net(images)
             if net.n_classes == 1:
                 loss = criterion(masks_pred.squeeze(1), true_masks.float())
+                masks_pred = F.softmax(masks_pred, dim=1)[0]
             else:
                 loss = criterion(masks_pred, true_masks)
+                masks_pred = torch.sigmoid(masks_pred)[0]
 
         # 6. Save the loss image 
         tf = transforms.Compose([
             transforms.Normalize(torch.min(loss),torch.max(loss)), 
             transforms.ToPILImage()
         ])
+        # tfpred = transforms.Compose([
+        #     transforms.ToPILImage(),
+        #     transforms.ToTensor()
+        # ])
         
         loss_array = tf(loss.cpu())
-        print(loss_array.getextrema())
+        full_mask = masks_pred.cpu().squeeze()
+        
+        if net.n_classes == 1:
+            full_mask = full_mask.float()
+        else:
+            print(full_mask.size())
+            full_mask = 1-F.one_hot(full_mask.argmax(dim=0), net.n_classes).permute(2, 0, 1).float()
+        tfnorm = transforms.Compose([
+            transforms.ToPILImage()
+        ])
+        
+        masks_pred_array = tfnorm(full_mask)
+        # print(loss_array.getextrema(),masks_pred_array.getextrema())
         # loss_array.show()
         outfile = outputfolder / Path(filenames[0] + ".png")
         loss_array = loss_array.save(outfile)
-        print("Reach end of step 6")
+        outfilepred = outputfolderpred / Path(filenames[0] + ".png")
+        masks_pred_array = masks_pred_array.save(outfilepred)
+        # print("Reach end of step 6")
 
 
     print("reach end of test-img function")

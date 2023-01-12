@@ -114,7 +114,7 @@ class CarvanaDataset(BasicDataset):
 class MaskDataset(AttentionDataset): 
     def __init__(self, images_dir: str, masks_dir: str, scale: float = 1, mask_suffix: str = '', attmaps_dir: str = '', withatt: bool = True):
         super().__init__(images_dir, masks_dir, scale, mask_suffix, attmaps_dir, withatt)
-    
+
     def __getitem__(self, idx):
         name = self.ids[idx]
         mask_file = list(self.masks_dir.glob(name + self.mask_suffix + '.*'))
@@ -132,23 +132,17 @@ class MaskDataset(AttentionDataset):
         if self.withatt: 
             attmap = self.load(attmap_file[0])
 
-        # if self.withatt: 
-        #     assert img.size == mask.size and img.size == attmap.size, \
-        #         f'Image, mask and attention map {name} should be the same size, but are {img.size}, {mask.size} and {attmap.size}'
-        # else: 
-        #     assert img.size == mask.size, \
-        #         f'Image and mask {name} should be the same size, but are {img.size} and {mask.size}'
-
-        img = self.preprocess(img, self.scale, is_mask=True)
+        img = self.preprocess(img, self.scale, is_mask=False)
         mask = self.preprocess(mask, self.scale, is_mask=True)
         if self.withatt: 
             attmap = self.preprocess(attmap, self.scale, is_mask=True)
         
         retdict = {}
-        retdict['gt'] = torch.as_tensor(img.copy()).float().contiguous()
+        retdict['image'] = torch.as_tensor(img.copy()).float().contiguous()
         retdict['mask'] = torch.as_tensor(mask.copy()).long().contiguous()
         if self.withatt: 
             retdict['attmap'] = torch.as_tensor(attmap.copy()).float().contiguous()
         retdict['index'] = idx+1
+        retdict['filename'] = name
 
         return retdict

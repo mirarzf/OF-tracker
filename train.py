@@ -80,10 +80,13 @@ def train_net(net,
     ''')
 
     # 4. Set up the optimizer, the loss, the learning rate scheduler and the loss scaling for AMP
-    optimizer = optim.RMSprop(net.parameters(), lr=learning_rate, weight_decay=1e-2, momentum=0.9) # VANILLA SETTINGS: net.parameters(), lr=learning_rate, weight_decay=1e-8, momentum=0.9
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=2)  # goal: maximize Dice score
+    # optimizer = optim.RMSprop(net.parameters(), lr=learning_rate, weight_decay=1e-2, momentum=0.9) # VANILLA SETTINGS: net.parameters(), lr=learning_rate, weight_decay=1e-8, momentum=0.9
+    optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=0.9)
+    # scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=2)  # goal: maximize Dice score
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda curr_epoch: (epochs - curr_epoch) / epochs) 
     grad_scaler = torch.cuda.amp.GradScaler(enabled=amp)
     criterion = nn.CrossEntropyLoss() # VANILLA 
+    debug_criterion = nn.CrossEntropyLoss(reduction='none') ############## DEBUG CROSS ENTROPY
     # criterion = nn.BCELoss() # GROUND TRUTH = SOFT MAPS 
     global_step = 0
 
@@ -115,6 +118,8 @@ def train_net(net,
                     if net.n_classes == 1:
                         loss = criterion(masks_pred.squeeze(1), true_masks.float())
                         loss += dice_loss(F.sigmoid(masks_pred.squeeze(1)), true_masks.float(), multiclass=False)
+                        with torch.no_grad(): 
+                            debug_loss = debug_criterion(masks_pred.squeeze(1), true_masks.float()) ################################# DEBUG CROSS ENTROPY 
                     else:
                         loss = criterion(masks_pred, true_masks)
                         loss += dice_loss(
@@ -122,6 +127,8 @@ def train_net(net,
                             F.one_hot(true_masks, net.n_classes).permute(0, 3, 1, 2).float(),
                             multiclass=True
                         )
+                        with torch.no_grad(): 
+                            debug_loss = debug_criterion(masks_pred, true_masks) ################################# DEBUG CROSS ENTROPY 
                     
                     if lossframesdecay: 
                         loss /= index 
@@ -165,6 +172,7 @@ def train_net(net,
                                 'true': wandb.Image(true_masks[0].float().cpu()),
                                 'pred': wandb.Image(masks_pred.argmax(dim=1)[0].float().cpu()),
                             },
+                            'cross entropy': wandb.Image(debug_loss[0].float().cpu()), 
                             'step': global_step,
                             'epoch': epoch,
                             **histograms

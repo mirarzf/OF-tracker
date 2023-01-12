@@ -4,56 +4,131 @@ import os
 from pathlib import Path
 from tqdm import tqdm
 
+
 import numpy as np
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from PIL import Image
+import cv2 as cv 
+import matplotlib.pyplot as plt 
 from torchvision import transforms
 
 from unet.unetutils.data_loading import MaskDataset
+from torch.utils.data import DataLoader
 from unet.unet_model import UNet, UNetAtt
 
 # Directories 
-dir_gt = Path('D:\\Master Thesis\\data\\KU\\test')
+dir_img = Path('D:\\Master Thesis\\data\\KU\\test')
 
 dir_mask = Path('D:\\Master Thesis\\data\\KU\\testannot')
 
 dir_attmap = Path('./data/attmaps/')
 
-outdir = Path("./results/unet")
+outdir = Path("./results/unet/celoss")
 
-def test_img(device,
-            img_scale=1,
-            out_threshold=0.5, 
+dir_model = "./checkpoints/"
+defaultmodelname = "woattention/tKU_bs4_e5_new.pth"
+modelpath = Path(dir_model + defaultmodelname)
+
+def test_img(net,
+            device,
+            img_scale: float = 0.5,
             useatt: bool = False, 
-            full_attmap = None):
+            modelname = Path(modelpath).stem):
     
     # 1. Create dataset
     if useatt: 
-        dataset = MaskDataset(images_dir=dir_gt, masks_dir=dir_mask, scale=img_scale, attmaps_dir=dir_attmap)
+        dataset = MaskDataset(images_dir=dir_img, masks_dir=dir_mask, scale=img_scale, attmaps_dir=dir_attmap)
     else: 
-        dataset = MaskDataset(images_dir=dir_gt, masks_dir=dir_mask, scale=img_scale, withatt=False)
+        dataset = MaskDataset(images_dir=dir_img, masks_dir=dir_mask, scale=img_scale, attmaps_dir='', withatt=False)
 
-    # 2. Set up the dice loss 
+    # 2. Create data loaders
+    loader_args = dict(batch_size=1, num_workers=4, pin_memory=True)
+    data_loader = DataLoader(dataset, shuffle=True, **loader_args)
+
+    # 3. Set the loss 
+    criterion = nn.CrossEntropyLoss(reduction='none') # VANILLA 
     
+    # 4. Create results saving folder 
+    outputfolder = outdir / modelname
+    Path.mkdir(outputfolder, exist_ok=True)
 
-    # 
+    # 5. Begin prediction 
+    for batch in data_loader: 
+        images = batch['image']
+        true_masks = batch['mask']
+        indices = batch['index']
+        filenames = batch['filename']
+
+        if useatt: 
+            attention_maps = batch['attmap']
+        
+        assert images.shape[1] == net.n_channels, \
+            f'Network has been defined with {net.n_channels} input channels, ' \
+            f'but loaded images have {images.shape[1]} channels. Please check that ' \
+            'the images are loaded correctly.'
+        
+        images = images.to(device=device, dtype=torch.float32)
+        true_masks = true_masks.to(device=device, dtype=torch.long)
+        indices = indices.to(device=device, dtype=torch.int)
+        if useatt: 
+            attention_maps = attention_maps.to(device=device, dtype=torch.float32)
+
+
+        with torch.no_grad():
+            masks_pred = net(images)
+            if net.n_classes == 1:
+                loss = criterion(masks_pred.squeeze(1), true_masks.float())
+            else:
+                loss = criterion(masks_pred, true_masks)
+
+        # 6. Save the loss image 
+        tf = transforms.Compose([
+            transforms.Normalize(torch.min(loss),torch.max(loss)), 
+            transforms.ToPILImage()
+        ])
+        
+        loss_array = tf(loss.cpu())
+        print(loss_array.getextrema())
+        # loss_array.show()
+        outfile = outputfolder / Path(filenames[0] + ".png")
+        loss_array = loss_array.save(outfile)
+        print("Reach end of step 6")
+
+
+    print("reach end of test-img function")
+    return 0 
 
 def get_args():
     parser = argparse.ArgumentParser(description='Predict masks from input images')
-    parser.add_argument('--model', '-m', default='MODEL.pth', metavar='FILE',
-                        help='Specify the file in which the model is stored')
-    parser.add_argument('--input', '-i', metavar='INPUT', nargs='+', help='Filenames of input images', required=True)
-    parser.add_argument('--output', '-o', metavar='OUTPUT', nargs='+', help='Filenames of output images')
-    parser.add_argument('--viz', '-v', action='store_true',
-                        help='Visualize the images as they are processed')
-    parser.add_argument('--no-save', '-n', action='store_true', help='Do not save the output masks')
-    parser.add_argument('--mask-threshold', '-t', type=float, default=0.5,
-                        help='Minimum probability value to consider a mask pixel white')
-    parser.add_argument('--scale', '-s', type=float, default=0.5,
-                        help='Scale factor for the input images')
+    parser.add_argument('--load', '-f', type=str, default=modelpath, help='Load model from a .pth file')
+    parser.add_argument('--scale', '-s', type=float, default=1.0, help='Downscaling factor of the images')
     parser.add_argument('--bilinear', action='store_true', default=False, help='Use bilinear upsampling')
     parser.add_argument('--classes', '-c', type=int, default=2, help='Number of classes')
-    parser.add_argument('--input_att', '-a', metavar='INPUT ATTENTION', nargs='+', help='Filenames of input attention maps')
+    parser.add_argument('--attention', action='store_true', default=False, help='Use UNet with attention model')
 
     return parser.parse_args()
+
+if __name__== '__main__': 
+    args = get_args()
+
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    if args.attention: 
+        net = UNetAtt(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
+    else: 
+        net = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
+
+    modelToLoad = torch.load(args.load, map_location=device)
+    net.load_state_dict(modelToLoad, strict=False)
+        
+    net.to(device=device)
+    
+    test_img(net,
+            device,
+            img_scale = args.scale,
+            useatt = args.attention, 
+            modelname = Path(args.load).stem)
+
+# python .\test.py -gt .\data\masks\gg4541_4629_extract_1.png -p .\data\masks\gg4541_4629_extract_1.png

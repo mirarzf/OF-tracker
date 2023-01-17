@@ -29,7 +29,7 @@ outdir = Path("./results/unet/celoss")
 outdirpred = Path("./results/unet/pred")
 
 dir_model = "./checkpoints/"
-defaultmodelname = "woattention/tKU_bs4_e10_new.pth"
+defaultmodelname = "woattention/tKU_bs1_e5.pth"
 modelpath = Path(dir_model + defaultmodelname)
 
 def test_img(net,

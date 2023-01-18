@@ -19,3 +19,6 @@ venv/
 
 # Avoid keeping wandb logs 
 wandb/
+
+# Avoid keeping my sshcomand file 
+sshcommands.txt

@@ -94,6 +94,7 @@ def train_net(net,
     for epoch in range(1, epochs+1):
         net.train()
         epoch_loss = 0
+        epoch_dice = 0 
         with tqdm(total=n_train, desc=f'Epoch {epoch}/{epochs}', unit='img') as pbar:
             for batch in train_loader:
                 images = batch['image']
@@ -161,11 +162,12 @@ def train_net(net,
                                 histograms['Gradients/' + tag] = wandb.Histogram(value.grad.data.cpu())
 
                         val_score = evaluate(net, val_loader, device, useatt=useatt)
-                        scheduler.step(val_score)
+                        epoch_dice += val_score
+                        # scheduler.step(val_score)
 
                         logging.info('Validation Dice score: {}'.format(val_score))
                         experiment.log({
-                            'learning rate': optimizer.param_groups[0]['lr'],
+                            # 'learning rate': optimizer.param_groups[0]['lr'],
                             'validation Dice': val_score,
                             'images': wandb.Image(images[0].cpu()),
                             'masks': {
@@ -177,7 +179,10 @@ def train_net(net,
                             'epoch': epoch,
                             **histograms
                         })
-        epoch_loss /= (n_train+n_val)
+        epoch_loss /= len(train_loader)
+        if division_step > 0: 
+            epoch_dice /= len(train_loader)/division_step
+        scheduler.step() # Change learning rate 
 
         # 6. (Optional) Save checkpoint at each epoch 
         if save_checkpoint:
@@ -199,6 +204,15 @@ def train_net(net,
                 best_loss = epoch_loss
                 best_ckpt = epoch
         print("best", best_loss, " this epoch ", epoch_loss, "\n")
+
+
+        experiment.log({
+            'learning rate': optimizer.param_groups[0]['lr'],
+            'epoch': epoch, 
+            'best epoch': best_ckpt, 
+            'train loss epoch avg': epoch_loss, 
+            'validation Dice epoch avg': epoch_dice 
+        })
     
     return best_ckpt 
 

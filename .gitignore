@@ -17,6 +17,9 @@ venv/
 
 .idea/
 
+# Avoid the virtual environment setup for now 
+oft
+
 # Avoid keeping wandb logs 
 wandb/
 

@@ -164,7 +164,7 @@ def train_net(net,
 
             logging.info('Validation Dice score: {}'.format(val_score))
             experiment.log({
-                # 'learning rate': optimizer.param_groups[0]['lr'],
+                'learning rate': optimizer.param_groups[0]['lr'],
                 'validation Dice': val_score,
                 'images': wandb.Image(images[0].cpu()),
                 'masks': {
@@ -215,7 +215,6 @@ def train_net(net,
         experiment.log({
             'epoch': epoch, 
             'best epoch': best_ckpt, 
-            'learning rate': optimizer.param_groups[0]['lr'],
             'train loss epoch avg': epoch_loss, 
         })
     

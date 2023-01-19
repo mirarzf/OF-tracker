@@ -38,7 +38,7 @@ def train_net(net,
               batch_size: int = 1,
               learning_rate: float = 1e-5,
               val_percent: float = 0.1,
-              save_checkpoint: bool = True,
+              save_checkpoint: bool = False,
               save_best_checkpoint: bool = True,
               img_scale: float = 0.5,
               amp: bool = False, 
@@ -56,9 +56,9 @@ def train_net(net,
     train_set, val_set = random_split(dataset, [n_train, n_val], generator=torch.Generator().manual_seed(0))
 
     # 3. Create data loaders
-    loader_args = dict(batch_size=batch_size, num_workers=4, pin_memory=True)
-    train_loader = DataLoader(train_set, shuffle=True, **loader_args)
-    val_loader = DataLoader(val_set, shuffle=False, drop_last=True, **loader_args)
+    loader_args = dict(num_workers=4, pin_memory=True)
+    train_loader = DataLoader(train_set, shuffle=True, batch_size=batch_size, **loader_args)
+    val_loader = DataLoader(val_set, shuffle=False, drop_last=True, batch_size=min(batch_size, n_val), **loader_args)
 
     # (Initialize logging)
     experiment = wandb.init(project='U-Net-w-attention-2', resume='allow', anonymous='must')
@@ -149,69 +149,74 @@ def train_net(net,
                 })
                 pbar.set_postfix(**{'loss (batch)': loss.item()})
 
-                # Evaluation round
-                division_step = (n_train // (10 * batch_size))
-                if division_step > 0:
-                    if global_step % division_step == 0:
-                        histograms = {}
-                        for tag, value in net.named_parameters():
-                            tag = tag.replace('/', '.')
-                            if not torch.isinf(value).any():
-                                histograms['Weights/' + tag] = wandb.Histogram(value.data.cpu())
-                            if not torch.isinf(value.grad).any():
-                                histograms['Gradients/' + tag] = wandb.Histogram(value.grad.data.cpu())
+            # Evaluation round (validation testing at the end of epoch)
+            histograms = {}
+            for tag, value in net.named_parameters():
+                tag = tag.replace('/', '.')
+                if not torch.isinf(value).any():
+                    histograms['Weights/' + tag] = wandb.Histogram(value.data.cpu())
+                if not torch.isinf(value.grad).any():
+                    histograms['Gradients/' + tag] = wandb.Histogram(value.grad.data.cpu())
 
-                        val_score = evaluate(net, val_loader, device, useatt=useatt)
-                        epoch_dice += val_score
-                        # scheduler.step(val_score)
+            val_score = evaluate(net, val_loader, device, useatt=useatt)
+            epoch_dice += val_score
+            # scheduler.step(val_score)
 
-                        logging.info('Validation Dice score: {}'.format(val_score))
-                        experiment.log({
-                            # 'learning rate': optimizer.param_groups[0]['lr'],
-                            'validation Dice': val_score,
-                            'images': wandb.Image(images[0].cpu()),
-                            'masks': {
-                                'true': wandb.Image(true_masks[0].float().cpu()),
-                                'pred': wandb.Image(masks_pred.argmax(dim=1)[0].float().cpu()),
-                            },
-                            'cross entropy': wandb.Image(debug_loss[0].float().cpu()), 
-                            'step': global_step,
-                            'epoch': epoch,
-                            **histograms
-                        })
+            logging.info('Validation Dice score: {}'.format(val_score))
+            experiment.log({
+                # 'learning rate': optimizer.param_groups[0]['lr'],
+                'validation Dice': val_score,
+                'images': wandb.Image(images[0].cpu()),
+                'masks': {
+                    'true': wandb.Image(true_masks[0].float().cpu()),
+                    'pred': wandb.Image(masks_pred.argmax(dim=1)[0].float().cpu()),
+                },
+                'cross entropy': wandb.Image(debug_loss[0].float().cpu()), 
+                'step': global_step,
+                'epoch': epoch,
+                **histograms
+            })
         epoch_loss /= len(train_loader)
-        if division_step > 0: 
-            epoch_dice /= len(train_loader)/division_step
         scheduler.step() # Change learning rate 
 
         # 6. (Optional) Save checkpoint at each epoch 
-        if save_checkpoint:
+        
+        if save_checkpoint or save_best_checkpoint:
             if useatt: 
                 dir_checkpoint = dir_checkpointwatt 
             else: 
                 dir_checkpoint = dir_checkpointwoatt
-            
+
+        if save_checkpoint:            
             Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
             torch.save(net.state_dict(), str(dir_checkpoint / 'checkpoint_epoch{}.pth'.format(epoch)))
             logging.info(f'Checkpoint {epoch} saved!')
         
         # 7. (Optional) Save best model 
-        if epoch == 1: 
-            best_loss = epoch_loss 
-            best_ckpt = 1 
-        else: 
-            if epoch_loss < best_loss: 
-                best_loss = epoch_loss
-                best_ckpt = epoch
-        print("best", best_loss, " this epoch ", epoch_loss, "\n")
+        if save_best_checkpoint: 
+            if epoch == 1: 
+                best_loss = epoch_loss 
+                best_ckpt = 1 
+                if not save_checkpoint: 
+                    Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
+                    torch.save(net.state_dict(), dir_checkpoint / 'checkpoint_epoch_best.pth')
+                    logging.info(f'Checkpoint {epoch} saved!')
+            else: 
+                if epoch_loss < best_loss: 
+                    best_loss = epoch_loss
+                    best_ckpt = epoch
+                    Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
+                    torch.save(net.state_dict(), dir_checkpoint / 'checkpoint_epoch_best.pth')
+                    logging.info(f'Best checkpoint at {epoch} saved!')
+            
+            logging.info('Epoch loss: {}'.format(best_loss))
 
-
+        # 8. Log all the previous parameters 
         experiment.log({
-            'learning rate': optimizer.param_groups[0]['lr'],
             'epoch': epoch, 
             'best epoch': best_ckpt, 
+            'learning rate': optimizer.param_groups[0]['lr'],
             'train loss epoch avg': epoch_loss, 
-            'validation Dice epoch avg': epoch_dice 
         })
     
     return best_ckpt 
@@ -232,6 +237,8 @@ def get_args():
     parser.add_argument('--classes', '-c', type=int, default=2, help='Number of classes')
     parser.add_argument('--attention', action='store_true', default=False, help='Use UNet with attention model')
     parser.add_argument('--framesdecay', action='store_true', default=False, help='Modify loss function to add the frames lack of importance')
+    parser.add_argument('--saveall', action='store_true', default=False, help='Save checkpoint at each epoch')
+    parser.add_argument('--savebest', action='store_false', default=True, help='Save checkpoint of best epoch')
 
     return parser.parse_args()
 
@@ -272,6 +279,8 @@ if __name__ == '__main__':
             device=device,
             img_scale=args.scale,
             val_percent=args.val / 100,
+            save_checkpoint=args.saveall,
+            save_best_checkpoint=args.savebest,
             amp=args.amp, 
             useatt=args.attention, 
             lossframesdecay=args.framesdecay)

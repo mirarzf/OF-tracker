@@ -3,10 +3,13 @@ from pathlib import Path
 import subprocess
 import logging 
 import copy
+import numpy as np 
+import numpy.random 
 
 # CHOOSE INPUT DIRECTORIES 
 # imgdir = Path("../data/GTEA/frames")
-imgdir = Path('D:\\Master Thesis\\data\\KU\\test')
+imgdir = Path('D:\\Master Thesis\\data\\KU\\train')
+# imgdir = Path('D:\\Master Thesis\\data\\KU\\test')
 # imgdir = Path("./data/imgs")
 attmapdir = None # Path("./")
 # attmapdir = Path("./data/attmaps")
@@ -19,7 +22,9 @@ if attmapdir != None:
 logging.info(f'The directory for output prediction maps is {outdir}. ')
 
 # SORT FILENAMES FOR INPUT 
-imgfilenames = [os.path.join(imgdir, f) for f in os.listdir(imgdir) if ".png" in f]
+imgfilenames = [os.path.join(imgdir, f) for f in os.listdir(imgdir) if ".png" in f and "gg" in f]
+samples = np.random.choice(len(imgfilenames), 20)
+imgfilenames = [imgfilenames[sample] for sample in samples]
 imgfilenames.sort()
 
 if attmapdir != None: 
@@ -34,7 +39,7 @@ if attmapdir != None:
 else: 
     logging.info(f'The standard UNet model is being used. ')
 
-ckp = Path("./checkpoints/woattention/tKU_bs4_e10_wde-2.pth")
+ckp = Path("./checkpoints/woattention/tKU_bs16_e50_lr1e-2.pth")
 cmdbegin = ["python", "predict.py", "--model", ckp]
 logging.info(f'The model loads the weights from {ckp}. ')
 cmd = cmdbegin.copy()

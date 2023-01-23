@@ -2,10 +2,12 @@ import torch
 import torch.nn.functional as F
 from tqdm import tqdm
 
+import numpy as np 
+
 from unet.unetutils.dice_score import multiclass_dice_coeff, dice_coeff
 
 
-def evaluate(net, dataloader, device, useatt=False):
+def evaluate(net, dataloader, device, useatt=False, addpos=False):
     net.eval()
     num_val_batches = len(dataloader)
     dice_score = 0
@@ -13,6 +15,15 @@ def evaluate(net, dataloader, device, useatt=False):
     # iterate over the validation set
     for batch in tqdm(dataloader, total=num_val_batches, desc='Validation round', unit='batch', leave=False):
         image, mask_true = batch['image'], batch['mask']
+        if addpos: 
+            # Add absolute positions to input 
+            _, batchsize, w, h = image.shape
+            x = torch.tensor(np.arange(h)/(h-1))
+            y = torch.tensor(np.arange(w)/(w-1))
+            grid_x, grid_y = torch.meshgrid(x, y, indexing='ij')
+            grid_x = grid_x.repeat(len(image), 1, 1, 1)
+            grid_y = grid_y.repeat(len(image), 1, 1, 1)
+            image = torch.cat((image, grid_x, grid_y), dim=1)
         if useatt: 
             attmap = batch['attmap']
             attmap = attmap.to(device=device, dtype=torch.float32)
@@ -27,6 +38,9 @@ def evaluate(net, dataloader, device, useatt=False):
                 mask_pred = net(image, attmap)
             else: 
                 mask_pred = net(image)
+
+            if addpos: 
+                mask_pred = mask_pred[:,:3,:,:]
 
             # convert to one-hot format
             if net.n_classes == 1:

@@ -10,6 +10,7 @@ import wandb
 from torch import optim
 from torch.utils.data import DataLoader, random_split
 from tqdm import tqdm
+import numpy as np 
 
 from unet.unetutils.data_loading import BasicDataset, AttentionDataset
 from unet.unetutils.dice_score import dice_loss
@@ -43,7 +44,8 @@ def train_net(net,
               img_scale: float = 0.5,
               amp: bool = False, 
               useatt: bool = False, 
-              lossframesdecay = False):
+              lossframesdecay: bool = False, 
+              addpositions: bool = False):
     # 1. Create dataset
     if useatt: 
         dataset = AttentionDataset(images_dir=dir_img, masks_dir=dir_mask, scale=img_scale, attmaps_dir=dir_attmap)
@@ -61,7 +63,12 @@ def train_net(net,
     val_loader = DataLoader(val_set, shuffle=False, drop_last=True, batch_size=min(batch_size, n_val), **loader_args)
 
     # (Initialize logging)
-    experiment = wandb.init(project='U-Net-w-attention-2', resume='allow', anonymous='must')
+    project_name = 'U-Net'
+    if useatt: 
+        project_name += '-w-attention'
+    if addpositions: 
+        project_name += '-w-positions'
+    experiment = wandb.init(project=project_name, resume='allow', anonymous='must')
     experiment.config.update(dict(epochs=epochs, batch_size=batch_size, learning_rate=learning_rate,
                                   val_percent=val_percent, save_checkpoint=save_checkpoint, img_scale=img_scale,
                                   amp=amp, use_attention=useatt))
@@ -98,6 +105,17 @@ def train_net(net,
         with tqdm(total=n_train, desc=f'Epoch {epoch}/{epochs}', unit='img') as pbar:
             for batch in train_loader:
                 images = batch['image']
+                if addpositions: 
+                    # Add absolute positions to input 
+                    _, batchsize, w, h = images.shape
+                    x = torch.tensor(np.arange(h)/(h-1))
+                    y = torch.tensor(np.arange(w)/(w-1))
+                    grid_x, grid_y = torch.meshgrid(x, y, indexing='ij')
+                    grid_x = grid_x.repeat(len(images), 1, 1, 1)
+                    grid_y = grid_y.repeat(len(images), 1, 1, 1)
+                    images = torch.cat((images, grid_x, grid_y), dim=1)
+                    # print(images[0,:,0,0], images[0,:,0,-1], images[0,:,-1,0], images[0,:,-1,-1])
+                    # print(images.shape)
                 true_masks = batch['mask']
                 index = batch['index']
                 if useatt: 
@@ -158,7 +176,7 @@ def train_net(net,
                 if not torch.isinf(value.grad).any():
                     histograms['Gradients/' + tag] = wandb.Histogram(value.grad.data.cpu())
 
-            val_score = evaluate(net, val_loader, device, useatt=useatt)
+            val_score = evaluate(net, val_loader, device, useatt=useatt, addpos=addpositions)
             epoch_dice += val_score
             # scheduler.step(val_score)
 
@@ -166,7 +184,7 @@ def train_net(net,
             experiment.log({
                 'learning rate': optimizer.param_groups[0]['lr'],
                 'validation Dice': val_score,
-                'images': wandb.Image(images[0].cpu()),
+                'images': wandb.Image(images[0,:3].cpu()),
                 'masks': {
                     'true': wandb.Image(true_masks[0].float().cpu()),
                     'pred': wandb.Image(masks_pred.argmax(dim=1)[0].float().cpu()),
@@ -238,6 +256,7 @@ def get_args():
     parser.add_argument('--framesdecay', action='store_true', default=False, help='Modify loss function to add the frames lack of importance')
     parser.add_argument('--saveall', action='store_true', default=False, help='Save checkpoint at each epoch')
     parser.add_argument('--savebest', action='store_false', default=True, help='Save checkpoint of best epoch')
+    parser.add_argument('--wpos', action='store_true', default=False, help='Add normalized position to input')
 
     return parser.parse_args()
 
@@ -253,10 +272,13 @@ if __name__ == '__main__':
     # n_channels=3 for RGB images
     # n_classes is the number of probabilities you want to get per pixel
     # if the model with attention is used, a different model will be loaded 
+    n_channels = 3 
+    if args.wpos: 
+        n_channels = 5 
     if args.attention: 
-        net = UNetAtt(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
+        net = UNetAtt(n_channels=n_channels, n_classes=args.classes, bilinear=args.bilinear)
     else: 
-        net = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
+        net = UNet(n_channels=n_channels, n_classes=args.classes, bilinear=args.bilinear)
 
     logging.info(f'Network:\n'
                  f'\t{net.n_channels} input channels\n'
@@ -282,7 +304,8 @@ if __name__ == '__main__':
             save_best_checkpoint=args.savebest,
             amp=args.amp, 
             useatt=args.attention, 
-            lossframesdecay=args.framesdecay)
+            lossframesdecay=args.framesdecay, 
+            addpositions=args.wpos)
         logging.info(f'Best model is found at checkpoint #{best_ckpt}.')
     except KeyboardInterrupt:
         torch.save(net.state_dict(), 'INTERRUPTED.pth')

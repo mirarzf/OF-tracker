@@ -29,8 +29,9 @@ dir_mask = Path('D:\\Master Thesis\\data\\KU\\testannot')
 
 dir_attmap = Path('./data/attmaps/')
 
-dir_checkpointwatt = Path('./checkpoints/attention/')
-dir_checkpointwoatt = Path('./checkpoints/woattention')
+dir_checkpoint = Path('./checkpoints')
+# dir_checkpointwatt = Path('./checkpoints/attention/')
+# dir_checkpointwoatt = Path('./checkpoints/woattention')
 
 
 def train_net(net,
@@ -200,14 +201,17 @@ def train_net(net,
         # 6. (Optional) Save checkpoint at each epoch 
         
         if save_checkpoint or save_best_checkpoint:
+            adddirckp = 'U-Net-' + str(net.n_channels)
             if useatt: 
-                dir_checkpoint = dir_checkpointwatt 
-            else: 
-                dir_checkpoint = dir_checkpointwoatt
+                adddirckp += '-w-attention' 
+            if addpositions: 
+                adddirckp += '-w-positions'
+            dirckp = dir_checkpoint / adddirckp
+            dirckp.mkdir(parents=True, exist_ok=True)
+
 
         if save_checkpoint:            
-            Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
-            torch.save(net.state_dict(), str(dir_checkpoint / 'checkpoint_epoch{}.pth'.format(epoch)))
+            torch.save(net.state_dict(), str(dirckp / 'checkpoint_epoch{}.pth'.format(epoch)))
             logging.info(f'Checkpoint {epoch} saved!')
         
         # 7. (Optional) Save best model 
@@ -216,14 +220,12 @@ def train_net(net,
                 best_loss = epoch_loss 
                 best_ckpt = 1 
                 if not save_checkpoint: 
-                    Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
-                    torch.save(net.state_dict(), dir_checkpoint / 'checkpoint_epoch_best.pth')
+                    torch.save(net.state_dict(), dirckp / 'checkpoint_epoch_best.pth')
                     logging.info(f'Checkpoint {epoch} saved!')
             else: 
                 if epoch_loss < best_loss: 
                     best_loss = epoch_loss
                     best_ckpt = epoch
-                    Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
                     torch.save(net.state_dict(), dir_checkpoint / 'checkpoint_epoch_best.pth')
                     logging.info(f'Best checkpoint at {epoch} saved!')
             

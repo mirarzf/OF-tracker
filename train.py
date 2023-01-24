@@ -9,6 +9,7 @@ import torch.nn.functional as F
 import wandb
 from torch import optim
 from torch.utils.data import DataLoader, random_split
+from torchvision import transforms
 from tqdm import tqdm
 import numpy as np 
 
@@ -18,21 +19,18 @@ from evaluate import evaluate
 from unet.unet_model import UNet, UNetAtt
 
 # dir_img = Path('./data/imgs/')
-dir_img = Path('D:\\Master Thesis\\data\\KU\\test')
+dir_img = Path('D:\\Master Thesis\\data\\KU\\train')
 # dir_img = Path('D:\\Master Thesis\\data\\GTEA\\GTEA\\train')
 # dir_img = Path('D:\\Master Thesis\\data\\EgoHOS\\train\\image')
 
 # dir_mask = Path('./data/masks/')
-dir_mask = Path('D:\\Master Thesis\\data\\KU\\testannot')
+dir_mask = Path('D:\\Master Thesis\\data\\KU\\trainannot')
 # dir_mask = Path('D:\\Master Thesis\\data\\GTEA\\GTEA\\trainannot')
 # dir_mask = Path('D:\\Master Thesis\\data\\EgoHOS\\train\\label')
 
 dir_attmap = Path('./data/attmaps/')
 
 dir_checkpoint = Path('./checkpoints')
-# dir_checkpointwatt = Path('./checkpoints/attention/')
-# dir_checkpointwoatt = Path('./checkpoints/woattention')
-
 
 def train_net(net,
               device,
@@ -49,9 +47,10 @@ def train_net(net,
               addpositions: bool = False):
     # 1. Create dataset
     if useatt: 
-        dataset = AttentionDataset(images_dir=dir_img, masks_dir=dir_mask, scale=img_scale, attmaps_dir=dir_attmap)
+        dataset = AttentionDataset(images_dir=dir_img, masks_dir=dir_mask, scale=img_scale, attmaps_dir=dir_attmap, transform = transforms.RandomHorizontalFlip())
     else: 
-        dataset = BasicDataset(images_dir=dir_img, masks_dir=dir_mask, scale=img_scale)
+        dataset = BasicDataset(images_dir=dir_img, masks_dir=dir_mask, scale=img_scale, transform = transforms.RandomHorizontalFlip(p=1))
+    print(len(dataset))
 
     # 2. Split into train / validation partitions
     n_val = int(len(dataset) * val_percent)

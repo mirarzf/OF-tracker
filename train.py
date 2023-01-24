@@ -15,6 +15,7 @@ import numpy as np
 
 from unet.unetutils.data_loading import BasicDataset, AttentionDataset
 from unet.unetutils.dice_score import dice_loss
+from unet.unetutils.data_augmentation import KUTransform
 from evaluate import evaluate
 from unet.unet_model import UNet, UNetAtt
 
@@ -47,9 +48,9 @@ def train_net(net,
               addpositions: bool = False):
     # 1. Create dataset
     if useatt: 
-        dataset = AttentionDataset(images_dir=dir_img, masks_dir=dir_mask, scale=img_scale, attmaps_dir=dir_attmap, transform = transforms.RandomHorizontalFlip())
+        dataset = AttentionDataset(images_dir=dir_img, masks_dir=dir_mask, scale=img_scale, attmaps_dir=dir_attmap, transform = KUTransform())
     else: 
-        dataset = BasicDataset(images_dir=dir_img, masks_dir=dir_mask, scale=img_scale, transform = transforms.RandomHorizontalFlip(p=1))
+        dataset = BasicDataset(images_dir=dir_img, masks_dir=dir_mask, scale=img_scale, transform = KUTransform())
     print(len(dataset))
 
     # 2. Split into train / validation partitions

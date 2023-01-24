@@ -8,6 +8,7 @@ import torch
 from PIL import Image
 from torch.utils.data import Dataset
 
+# from unet.unetutils.data_augmentation import KUTransform
 from torchvision import transforms
 
 
@@ -29,10 +30,10 @@ class AttentionDataset(Dataset):
         logging.info(f'Creating dataset with {len(self.ids)} initial examples')
 
     def __len__(self):
-        return 2*len(self.ids)
+        return len(self.ids)
 
     @staticmethod
-    def preprocess(pil_img, scale, is_mask):
+    def preprocess(pil_img, scale, is_mask, applytransform: bool = False):
         w, h = pil_img.size
         # newW, newH = int(scale * w), int(scale * h)
         # assert newW > 0 and newH > 0, 'Scale is too small, resized images would have no pixel'
@@ -69,7 +70,7 @@ class AttentionDataset(Dataset):
             return Image.open(filename)
 
     def __getitem__(self, idx):
-        name = self.ids[idx//2]
+        name = self.ids[idx]
         mask_file = list(self.masks_dir.glob(name + self.mask_suffix + '.*'))
         img_file = list(self.images_dir.glob(name + '.*'))
         if self.withatt: 
@@ -91,7 +92,7 @@ class AttentionDataset(Dataset):
         # else: 
         #     assert img.size == mask.size, \
         #         f'Image and mask {name} should be the same size, but are {img.size} and {mask.size}'
-
+        
         img = self.preprocess(img, self.scale, is_mask=False)
         mask = self.preprocess(mask, self.scale, is_mask=True)
         if self.withatt: 
@@ -100,12 +101,12 @@ class AttentionDataset(Dataset):
         retdict = {}
         retdict['image'] = torch.as_tensor(img.copy()).float().contiguous()
         retdict['mask'] = torch.as_tensor(mask.copy()).long().contiguous()
-        if idx%2==1: 
+        if self.transform: 
             retdict['image'] = self.transform(retdict['image'])
             retdict['mask'] = self.transform(retdict['mask'])
         if self.withatt: 
             retdict['attmap'] = torch.as_tensor(attmap.copy()).float().contiguous()
-            if idx%2==1: 
+            if self.transform: 
                 retdict['attmap'] = self.transform(retdict['attmap'])
 
 
@@ -118,8 +119,8 @@ class BasicDataset(AttentionDataset):
 
 
 class CarvanaDataset(BasicDataset):
-    def __init__(self, images_dir, masks_dir, scale=1):
-        super().__init__(images_dir, masks_dir, scale, mask_suffix='_mask')
+    def __init__(self, images_dir, masks_dir, scale=1, transform = None):
+        super().__init__(images_dir, masks_dir, scale, mask_suffix='_mask', transform=transform)
 
 class MaskDataset(AttentionDataset): 
     def __init__(self, images_dir: str, masks_dir: str, scale: float = 1, mask_suffix: str = '', transform = None, attmaps_dir: str = '', withatt: bool = True):
@@ -152,6 +153,14 @@ class MaskDataset(AttentionDataset):
         retdict['mask'] = torch.as_tensor(mask.copy()).long().contiguous()
         if self.withatt: 
             retdict['attmap'] = torch.as_tensor(attmap.copy()).float().contiguous()
+        if self.transform: 
+            retdict['image'] = self.transform(retdict['image'])
+            retdict['mask'] = self.transform(retdict['mask'])
+        if self.withatt: 
+            retdict['attmap'] = torch.as_tensor(attmap.copy()).float().contiguous()
+            if self.transform: 
+                retdict['attmap'] = self.transform(retdict['attmap'])
+        
         retdict['index'] = idx+1
         retdict['filename'] = name
 

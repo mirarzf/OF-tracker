@@ -1,15 +1,12 @@
-import cv2 as cv 
-import numpy as np
+import torch
+from torchvision import transforms 
+import torchvision.transforms.functional as F
+from PIL import Image
+from unet.unetutils.data_augmentation import KUTransform
 
-import os 
-from pathlib import Path
 
-path = "D:\\Master Thesis\\data\\EgoHOS\\train\\label\\ego4d_000a3525-6c98-4650-aaab-be7d2c7b9402_600.png"
-print(path)
-print(type(path))
-img = cv.imread(path)
-print(np.min(img), np.max(img))
-imagtuned = np.where(img > 0, 255 / img, img)
-print(np.unique(imagtuned), np.max(imagtuned))
-cv.imshow('Imagtuned', imagtuned)
-cv.waitKey(0)
+img = Image.open('./data/imgs/gg4541_4629_extract_1.png')
+img.show()
+transforms = KUTransform()
+img = transforms(img)
+img.show()

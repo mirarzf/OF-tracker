@@ -26,7 +26,7 @@ attmapdir = None # Path("./")
 outdir = Path("./results/unet")
 
 dir_checkpoint = Path('./checkpoints')
-ckp = dir_checkpoint / "U-Net-3/tKU_bs16_e50_lr1e-1.pth" 
+ckp = "U-Net-3/tKU_bs16_e50_lr1e-1.pth" 
 
 
 def predict_img(net,
@@ -83,7 +83,7 @@ def predict_img(net,
 
 def get_args():
     parser = argparse.ArgumentParser(description='Predict masks from input images')
-    parser.add_argument('--model', '-m', default=ckp, metavar='FILE',
+    parser.add_argument('--model', '-m', default=dir_checkpoint / ckp, metavar='FILE',
                         help='Specify the file in which the model is stored')
     inputgroup = parser.add_mutually_exclusive_group(required=True)
     inputgroup.add_argument('--input', '-i', metavar='INPUT', nargs='+', help='Filenames of input images')
@@ -108,10 +108,10 @@ def get_output_filenames(args):
     return args.output or [outdir / f.name for f in imgfilenames]
     
 def get_attmap_filenames(args): 
-    if args.dir and attmapdir == None: 
-        return args.input_att 
-    else: 
+    if args.dir and attmapdir != None: 
         return [attmapdir / f.name for f in imgfilenames]
+    else: 
+        return args.input_att 
 
 def mask_to_image(mask: np.ndarray):
     if mask.ndim == 2:

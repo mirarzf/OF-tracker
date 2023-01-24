@@ -100,14 +100,9 @@ class AttentionDataset(Dataset):
         
         retdict = {}
         retdict['image'] = torch.as_tensor(img.copy()).float().contiguous()
-        retdict['mask'] = torch.as_tensor(mask.copy()).long().contiguous()
         if self.transform: 
             retdict['image'] = self.transform(retdict['image'])
-            retdict['mask'] = self.transform(retdict['mask'])
-        if self.withatt: 
-            retdict['attmap'] = torch.as_tensor(attmap.copy()).float().contiguous()
-            if self.transform: 
-                retdict['attmap'] = self.transform(retdict['attmap'])
+        retdict['mask'] = torch.as_tensor(mask.copy()).long().contiguous()
 
 
         retdict['index'] = idx+1
@@ -150,16 +145,11 @@ class MaskDataset(AttentionDataset):
         
         retdict = {}
         retdict['image'] = torch.as_tensor(img.copy()).float().contiguous()
+        if self.transform: 
+            retdict['image'] = self.transform(retdict['image'])
         retdict['mask'] = torch.as_tensor(mask.copy()).long().contiguous()
         if self.withatt: 
             retdict['attmap'] = torch.as_tensor(attmap.copy()).float().contiguous()
-        if self.transform: 
-            retdict['image'] = self.transform(retdict['image'])
-            retdict['mask'] = self.transform(retdict['mask'])
-        if self.withatt: 
-            retdict['attmap'] = torch.as_tensor(attmap.copy()).float().contiguous()
-            if self.transform: 
-                retdict['attmap'] = self.transform(retdict['attmap'])
         
         retdict['index'] = idx+1
         retdict['filename'] = name

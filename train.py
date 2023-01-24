@@ -107,7 +107,7 @@ def train_net(net,
             for batch in train_loader:
                 images = batch['image']
                 if addpositions: 
-                    # Add absolute positions to input 
+                    # Add normalized positions to input 
                     _, batchsize, w, h = images.shape
                     x = torch.tensor(np.arange(h)/(h-1))
                     y = torch.tensor(np.arange(w)/(w-1))
@@ -115,8 +115,6 @@ def train_net(net,
                     grid_x = grid_x.repeat(len(images), 1, 1, 1)
                     grid_y = grid_y.repeat(len(images), 1, 1, 1)
                     images = torch.cat((images, grid_x, grid_y), dim=1)
-                    # print(images[0,:,0,0], images[0,:,0,-1], images[0,:,-1,0], images[0,:,-1,-1])
-                    # print(images.shape)
                 true_masks = batch['mask']
                 index = batch['index']
                 if useatt: 

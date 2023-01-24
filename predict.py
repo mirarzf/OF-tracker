@@ -1,6 +1,6 @@
 import argparse
 import logging
-import os
+from pathlib import Path
 from tqdm import tqdm
 
 import numpy as np
@@ -13,15 +13,41 @@ from unet.unetutils.data_loading import AttentionDataset
 from unet.unet_model import UNet, UNetAtt
 from unet.unetutils.utils import plot_img_and_mask
 
+
+# CHOOSE INPUT DIRECTORIES 
+# imgdir = Path("../data/GTEA/frames")
+# imgdir = Path('D:\\Master Thesis\\data\\KU\\train')
+imgdir = Path('D:\\Master Thesis\\data\\KU\\test')
+imgfilenames = [f for f in imgdir.glob('*.png') if f.is_file() and 'mirrored' not in f.name] 
+# imgdir = Path("./data/imgs")
+attmapdir = None # Path("./")
+# attmapdir = Path('D:\\Master Thesis\\data\\KU\\testannot')
+# attmapdir = Path("./data/attmaps")
+outdir = Path("./results/unet")
+
+dir_checkpoint = Path('./checkpoints')
+ckp = dir_checkpoint / "U-Net-3/tKU_bs16_e50_lr1e-1.pth" 
+
+
 def predict_img(net,
                 full_img,
                 device,
                 scale_factor=1,
                 out_threshold=0.5, 
                 useatt: bool = False, 
-                full_attmap = None):
+                full_attmap = None, 
+                addpositions: bool = False):
     net.eval()
     img = torch.from_numpy(AttentionDataset.preprocess(full_img, scale_factor, is_mask=False))
+    if addpositions: 
+        # Add normalized positions to input 
+        _, w, h = img.shape
+        x = torch.tensor(np.arange(h)/(h-1))
+        y = torch.tensor(np.arange(w)/(w-1))
+        grid_x, grid_y = torch.meshgrid(x, y, indexing='ij')
+        grid_x = grid_x.repeat(1, 1, 1)
+        grid_y = grid_y.repeat(1, 1, 1)
+        img = torch.cat((img, grid_x, grid_y), dim=0)
     img = img.unsqueeze(0)
     img = img.to(device=device, dtype=torch.float32)
 
@@ -57,9 +83,11 @@ def predict_img(net,
 
 def get_args():
     parser = argparse.ArgumentParser(description='Predict masks from input images')
-    parser.add_argument('--model', '-m', default='MODEL.pth', metavar='FILE',
+    parser.add_argument('--model', '-m', default=ckp, metavar='FILE',
                         help='Specify the file in which the model is stored')
-    parser.add_argument('--input', '-i', metavar='INPUT', nargs='+', help='Filenames of input images', required=True)
+    inputgroup = parser.add_mutually_exclusive_group(required=True)
+    inputgroup.add_argument('--input', '-i', metavar='INPUT', nargs='+', help='Filenames of input images')
+    inputgroup.add_argument('--dir', action='store_true', default=False, help='Use directories specified in predict.py file instead')
     parser.add_argument('--output', '-o', metavar='OUTPUT', nargs='+', help='Filenames of output images')
     parser.add_argument('--viz', '-v', action='store_true',
                         help='Visualize the images as they are processed')
@@ -71,16 +99,19 @@ def get_args():
     parser.add_argument('--bilinear', action='store_true', default=False, help='Use bilinear upsampling')
     parser.add_argument('--classes', '-c', type=int, default=2, help='Number of classes')
     parser.add_argument('--input_att', '-a', metavar='INPUT ATTENTION', nargs='+', help='Filenames of input attention maps')
+    parser.add_argument('--wpos', action='store_true', default=False, help='Add normalized position to input')
 
     return parser.parse_args()
 
 
-def get_output_filenames(args):
-    def _generate_name(fn):
-        return f'{os.path.splitext(fn)[0]}_OUT.png'
-
-    return args.output or list(map(_generate_name, args.input))
-
+def get_output_filenames(args): 
+    return args.output or [outdir / f.name for f in imgfilenames]
+    
+def get_attmap_filenames(args): 
+    if args.dir and attmapdir == None: 
+        return args.input_att 
+    else: 
+        return [attmapdir / f.name for f in imgfilenames]
 
 def mask_to_image(mask: np.ndarray):
     if mask.ndim == 2:
@@ -91,22 +122,33 @@ def mask_to_image(mask: np.ndarray):
 
 if __name__ == '__main__':
     args = get_args()
-    in_files = args.input
-    in_files_att = args.input_att
+
+    # Prepare the input files 
+    if args.dir: 
+        in_files = imgfilenames
+    else: 
+        in_files = args.input
+    in_files_att = get_attmap_filenames(args)
     out_files = get_output_filenames(args)
 
     useatt = True if in_files_att != None else False 
 
+    n_channels = 3 
+    if args.wpos: 
+        n_channels = 5 
     if useatt: 
-        net = UNetAtt(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
+        net = UNetAtt(n_channels=n_channels, n_classes=args.classes, bilinear=args.bilinear)
     else: 
-        net = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
+        net = UNet(n_channels=n_channels, n_classes=args.classes, bilinear=args.bilinear)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     logging.info(f'Loading model {args.model}')
     logging.info(f'Using device {device}')
 
     modelToLoad = torch.load(args.model, map_location=device)
+    nchanToLoad = modelToLoad['inc.double_conv.0.weight'].shape[1]
+    assert net.n_channels == nchanToLoad, \
+        f"Number of input channels ({net.n_channels}) and loaded model ({nchanToLoad}) are not the same. Choose a different model to load."
     net.load_state_dict(modelToLoad, strict=False)
     net.to(device=device)
 
@@ -126,7 +168,8 @@ if __name__ == '__main__':
                            out_threshold=args.mask_threshold,
                            device=device, 
                            useatt=useatt, 
-                           full_attmap=attmap)
+                           full_attmap=attmap, 
+                           addpositions=args.wpos)
 
         if not args.no_save:
             out_filename = out_files[i]

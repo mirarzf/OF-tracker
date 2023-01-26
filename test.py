@@ -11,7 +11,7 @@ from torchvision import transforms
 
 from unet.unetutils.data_loading import AttentionDataset
 from unet.unet_model import UNet, UNetAtt
-from unet.unetutils.utils import plot_img_and_mask
+from unet.unetutils.utils import plot_img_and_mask_and_gt
 
 
 import os
@@ -19,18 +19,19 @@ os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
 # CHOOSE INPUT DIRECTORIES 
 # imgdir = Path("../data/GTEA/frames")
-# imgdir = Path('D:\\Master Thesis\\data\\KU\\train')
-imgdir = Path('D:\\Master Thesis\\data\\KU\\test')
+imgdir = Path('D:\\Master Thesis\\data\\KU\\train')
+# imgdir = Path('D:\\Master Thesis\\data\\KU\\test')
 imgfilenames = [f for f in imgdir.glob('*.png') if f.is_file()] 
 # imgdir = Path("./data/imgs")
-gtdir = Path('D:\\Master Thesis\\data\\KU\\testannot')
+gtdir = Path('D:\\Master Thesis\\data\\KU\\trainannot')
+# gtdir = Path('D:\\Master Thesis\\data\\KU\\testannot')
 attmapdir = None # Path("./")
 # attmapdir = Path('D:\\Master Thesis\\data\\KU\\testannot')
 # attmapdir = Path("./data/attmaps")
 outdir = Path("./results/unet")
 
 dir_checkpoint = Path('./checkpoints')
-ckp = "U-Net-5-w-positions/tKU_bs16_e50_lr1e-1_old.pth" 
+ckp = "U-Net-5-w-positions/tKU_bs16_e50_lr1e-1.pth" 
 
 
 def predict_img(net,
@@ -222,7 +223,7 @@ if __name__ == '__main__':
 
         if args.viz:
             logging.info(f'Visualizing results for image {filename}, close to continue...')
-            plot_img_and_mask(img, mask)
+            plot_img_and_mask_and_gt(img, gt, mask)
     
     dice_score /= len(imgfilenames)
 

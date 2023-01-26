@@ -34,7 +34,7 @@ class AttentionDataset(Dataset):
         return len(self.ids)
 
     @staticmethod
-    def preprocess(pil_img, scale, is_mask, applytransform: bool = False):
+    def preprocess(pil_img, scale=1, is_mask=False):
         w, h = pil_img.size
         # newW, newH = int(scale * w), int(scale * h)
         # assert newW > 0 and newH > 0, 'Scale is too small, resized images would have no pixel'

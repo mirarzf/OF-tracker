@@ -13,6 +13,9 @@ from unet.unetutils.data_loading import AttentionDataset
 from unet.unet_model import UNet, UNetAtt
 from unet.unetutils.utils import plot_img_and_mask
 
+import os
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
+
 
 # CHOOSE INPUT DIRECTORIES 
 # imgdir = Path("../data/GTEA/frames")
@@ -122,6 +125,7 @@ def mask_to_image(mask: np.ndarray):
 
 if __name__ == '__main__':
     args = get_args()
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
     # Prepare the input files 
     if args.dir: 

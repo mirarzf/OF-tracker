@@ -188,7 +188,6 @@ def train_net(net,
             epoch_dice += val_score
             # scheduler.step(val_score)
 
-            print('heeey', true_masks.size())
             logging.info('Validation Dice score: {}'.format(val_score))
             experiment.log({
                 'learning rate': optimizer.param_groups[0]['lr'],
@@ -272,8 +271,6 @@ def get_args():
 
 
 if __name__ == '__main__':
-    torch.cuda.empty_cache()
-
     args = get_args()
 
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')

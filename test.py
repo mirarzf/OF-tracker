@@ -19,19 +19,19 @@ os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
 # CHOOSE INPUT DIRECTORIES 
 # imgdir = Path("../data/GTEA/frames")
-imgdir = Path('D:\\Master Thesis\\data\\KU\\train')
-# imgdir = Path('D:\\Master Thesis\\data\\KU\\test')
+# imgdir = Path('D:\\Master Thesis\\data\\KU\\train')
+imgdir = Path('D:\\Master Thesis\\data\\KU\\test')
 imgfilenames = [f for f in imgdir.glob('*.png') if f.is_file()] 
 # imgdir = Path("./data/imgs")
-gtdir = Path('D:\\Master Thesis\\data\\KU\\trainannot')
-# gtdir = Path('D:\\Master Thesis\\data\\KU\\testannot')
+# gtdir = Path('D:\\Master Thesis\\data\\KU\\trainannot')
+gtdir = Path('D:\\Master Thesis\\data\\KU\\testannot')
 attmapdir = None # Path("./")
 # attmapdir = Path('D:\\Master Thesis\\data\\KU\\testannot')
 # attmapdir = Path("./data/attmaps")
 outdir = Path("./results/unet")
 
 dir_checkpoint = Path('./checkpoints')
-ckp = "U-Net-5-w-positions/tKU_bs16_e50_lr1e-1.pth" 
+ckp = "U-Net-3/tKU_bs16_e50_lr1e-1.pth" 
 
 
 def predict_img(net,

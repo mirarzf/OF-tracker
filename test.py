@@ -30,7 +30,7 @@ attmapdir = None # Path("./")
 outdir = Path("./results/unet")
 
 dir_checkpoint = Path('./checkpoints')
-ckp = "U-Net-5-w-positions/tKU_bs16_e50_lr1e-1.pth" 
+ckp = "U-Net-5-w-positions/tKU_bs16_e50_lr1e-1_old.pth" 
 
 
 def predict_img(net,
@@ -208,9 +208,6 @@ if __name__ == '__main__':
         gt = np.asarray(gt)
         thres = 0
         gt = np.where(gt > thres, 1, 0)[:,:,0]
-
-        # print('\n mask shape', mask.shape)
-        # print('\n gt shape', gt.shape)
 
         dice_score += dice(
             mask, 

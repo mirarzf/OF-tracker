@@ -22,7 +22,8 @@ class AttentionDataset(Dataset):
         assert 0 < scale <= 1, 'Scale must be between 0 and 1'
         self.scale = scale
         self.mask_suffix = mask_suffix
-        self.transform = transform
+        self.geotransform = transform['geometric']()
+        self.colortransform = transform['color']()
 
         self.ids = [splitext(file)[0] for file in listdir(images_dir) if not file.startswith('.')]
         if not self.ids:
@@ -100,11 +101,16 @@ class AttentionDataset(Dataset):
         
         retdict = {}
         retdict['image'] = torch.as_tensor(img.copy()).float().contiguous()
-        if self.transform: 
-            retdict['image'] = self.transform(retdict['image'])
         retdict['mask'] = torch.as_tensor(mask.copy()).long().contiguous()
-
-
+        if self.withatt: 
+            retdict['attmap'] = torch.as_tensor(attmap.copy()).long().contiguous()
+        
+        if self.geotransform: 
+            retdict = self.geotransform(retdict)
+        
+        if self.colortransform: 
+            retdict['image'] = self.colortransform(retdict['image'])
+        
         retdict['index'] = idx+1
         return retdict
 

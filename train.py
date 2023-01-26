@@ -15,7 +15,7 @@ import numpy as np
 
 from unet.unetutils.data_loading import BasicDataset, AttentionDataset
 from unet.unetutils.dice_score import dice_loss
-from unet.unetutils.data_augmentation import KUTransform
+from unet.unetutils.data_augmentation import GeometricTransform, KUTransform
 from evaluate import evaluate
 from unet.unet_model import UNet, UNetAtt
 
@@ -47,10 +47,12 @@ def train_net(net,
               lossframesdecay: bool = False, 
               addpositions: bool = False):
     # 1. Create dataset
+    dataaugtransform = {'geometric': GeometricTransform, 
+                        'color': KUTransform}
     if useatt: 
-        dataset = AttentionDataset(images_dir=dir_img, masks_dir=dir_mask, scale=img_scale, attmaps_dir=dir_attmap, transform = KUTransform())
+        dataset = AttentionDataset(images_dir=dir_img, masks_dir=dir_mask, scale=img_scale, attmaps_dir=dir_attmap, transform = dataaugtransform)
     else: 
-        dataset = BasicDataset(images_dir=dir_img, masks_dir=dir_mask, scale=img_scale, transform = KUTransform())
+        dataset = BasicDataset(images_dir=dir_img, masks_dir=dir_mask, scale=img_scale, transform = dataaugtransform)
     print(len(dataset))
 
     # 2. Split into train / validation partitions
@@ -70,9 +72,16 @@ def train_net(net,
     if addpositions: 
         project_name += '-w-positions'
     experiment = wandb.init(project=project_name, resume='allow', anonymous='must')
-    experiment.config.update(dict(epochs=epochs, batch_size=batch_size, learning_rate=learning_rate,
-                                  val_percent=val_percent, save_checkpoint=save_checkpoint, img_scale=img_scale,
-                                  amp=amp, use_attention=useatt))
+    experiment.config.update(dict(
+        epochs=epochs, 
+        batch_size=batch_size, 
+        learning_rate=learning_rate, 
+        val_percent=val_percent, 
+        save_checkpoint=save_checkpoint, 
+        img_scale=img_scale, 
+        amp=amp, 
+        use_attention=useatt
+        ))
 
     logging.info(f'''Starting training:
         Attention model: {useatt}
@@ -179,6 +188,7 @@ def train_net(net,
             epoch_dice += val_score
             # scheduler.step(val_score)
 
+            print('heeey', true_masks.size())
             logging.info('Validation Dice score: {}'.format(val_score))
             experiment.log({
                 'learning rate': optimizer.param_groups[0]['lr'],

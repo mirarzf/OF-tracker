@@ -31,7 +31,8 @@ attmapdir = None # Path("./")
 outdir = Path("./results/unet")
 
 dir_checkpoint = Path('./checkpoints')
-ckp = "U-Net-3/tKU_bs16_e50_lr1e-1.pth" 
+ckp = "U-Net-5-w-positions/tKU_bs16_e50_lr1e-1.pth" 
+# ckp = "U-Net-3/tKU_bs16_e50_lr1e-1.pth" 
 
 
 def predict_img(net,
@@ -45,6 +46,7 @@ def predict_img(net,
     net.eval()
     img = torch.from_numpy(AttentionDataset.preprocess(full_img, scale_factor, is_mask=False))
     if addpositions: 
+        print("add positions")
         # Add normalized positions to input 
         _, w, h = img.shape
         x = torch.tensor(np.arange(h)/(h-1))
@@ -53,6 +55,7 @@ def predict_img(net,
         grid_x = grid_x.repeat(1, 1, 1)
         grid_y = grid_y.repeat(1, 1, 1)
         img = torch.cat((img, grid_x, grid_y), dim=0)
+    print(img.size(), img[:,50,50])
     img = img.unsqueeze(0)
     img = img.to(device=device, dtype=torch.float32)
 
@@ -84,7 +87,6 @@ def predict_img(net,
         return (full_mask > out_threshold).numpy()
     else:
         return F.one_hot(full_mask.argmax(dim=0), net.n_classes).permute(2, 0, 1).numpy()
-        # return torch.argmax(F.one_hot(full_mask.argmax(dim=0), net.n_classes).permute(2, 0, 1), dim=0).numpy()
 
 
 def get_args():
@@ -166,7 +168,7 @@ if __name__ == '__main__':
 
     n_channels = 3 
     if args.wpos: 
-        n_channels = 5 
+        n_channels += 2 
     if useatt: 
         net = UNetAtt(n_channels=n_channels, n_classes=args.classes, bilinear=args.bilinear)
     else: 
@@ -175,6 +177,8 @@ if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     logging.info(f'Loading model {args.model}')
     logging.info(f'Using device {device}')
+
+    beforeloadpara = str(net.state_dict())
 
     modelToLoad = torch.load(args.model, map_location=device)
     nchanToLoad = modelToLoad['inc.double_conv.0.weight'].shape[1]
@@ -204,8 +208,9 @@ if __name__ == '__main__':
                            full_attmap=attmap, 
                            addpositions=args.wpos)
         
+        print("mask size:", mask.shape)
+
         gt = Image.open(in_files_gt[i])
-        # print(in_files_gt[i])
         gt = np.asarray(gt)
         thres = 0
         gt = np.where(gt > thres, 1, 0)[:,:,0]
@@ -225,7 +230,6 @@ if __name__ == '__main__':
             logging.info(f'Visualizing results for image {filename}, close to continue...')
             plot_img_and_mask_and_gt(img, gt, mask)
     
-    dice_score /= len(imgfilenames)
+    dice_score /= len(in_files)
 
     logging.info(f'Final average DICE score is: {dice_score}')
-    print(dice_score)

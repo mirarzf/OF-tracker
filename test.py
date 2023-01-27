@@ -55,7 +55,6 @@ def predict_img(net,
         grid_x = grid_x.repeat(1, 1, 1)
         grid_y = grid_y.repeat(1, 1, 1)
         img = torch.cat((img, grid_x, grid_y), dim=0)
-    print(img.size(), img[:,50,50])
     img = img.unsqueeze(0)
     img = img.to(device=device, dtype=torch.float32)
 
@@ -135,6 +134,7 @@ def diceuniqueclass(pred, gt, classvalue = 1):
     cardpred = np.sum(predones)
     cardgt = np.sum(gtones)
     inter = np.sum(predones*gtones)
+    print(cardpred + cardgt)
     return 2 * inter / (cardpred + cardgt)
 
 def dice(pred, gt, multiclass = True): 
@@ -178,8 +178,6 @@ if __name__ == '__main__':
     logging.info(f'Loading model {args.model}')
     logging.info(f'Using device {device}')
 
-    beforeloadpara = str(net.state_dict())
-
     modelToLoad = torch.load(args.model, map_location=device)
     nchanToLoad = modelToLoad['inc.double_conv.0.weight'].shape[1]
     assert net.n_channels == nchanToLoad, \
@@ -208,8 +206,6 @@ if __name__ == '__main__':
                            full_attmap=attmap, 
                            addpositions=args.wpos)
         
-        print("mask size:", mask.shape)
-
         gt = Image.open(in_files_gt[i])
         gt = np.asarray(gt)
         thres = 0

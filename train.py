@@ -53,7 +53,6 @@ def train_net(net,
         dataset = AttentionDataset(images_dir=dir_img, masks_dir=dir_mask, scale=img_scale, attmaps_dir=dir_attmap, transform = dataaugtransform)
     else: 
         dataset = BasicDataset(images_dir=dir_img, masks_dir=dir_mask, scale=img_scale, transform = dataaugtransform)
-    print(len(dataset))
 
     # 2. Split into train / validation partitions
     n_val = int(len(dataset) * val_percent)
@@ -283,7 +282,7 @@ if __name__ == '__main__':
     # if the model with attention is used, a different model will be loaded 
     n_channels = 3 
     if args.wpos: 
-        n_channels = 5 
+        n_channels += 2
     if args.attention: 
         net = UNetAtt(n_channels=n_channels, n_classes=args.classes, bilinear=args.bilinear)
     else: 

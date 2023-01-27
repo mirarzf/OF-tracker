@@ -31,7 +31,7 @@ attmapdir = None # Path("./")
 outdir = Path("./results/unet")
 
 dir_checkpoint = Path('./checkpoints')
-ckp = "U-Net-5-w-positions/tKU_bs16_e50_lr1e-1.pth" 
+ckp = "U-Net-5-w-positions/tKU_bs16_e50_lr5e-1.pth" 
 # ckp = "U-Net-3/tKU_bs16_e50_lr1e-1.pth" 
 
 

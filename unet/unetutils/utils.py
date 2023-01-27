@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 
 
 def plot_img_and_mask(img, mask):
-    classes = mask.shape[0] if len(mask.shape) > 2 and mask.shape[0] > 2 else 1
+    classes = mask.shape[0] if len(mask.shape) > 2 else 1
     fig, ax = plt.subplots(1, classes + 1)
     ax[0].set_title('Input image')
     ax[0].imshow(img)
@@ -18,7 +18,7 @@ def plot_img_and_mask(img, mask):
 
 
 def plot_img_and_mask_and_gt(img, gt, mask):
-    classes = mask.shape[0] if len(mask.shape) > 2 and mask.shape[0] > 2 else 1
+    classes = mask.shape[0] if len(mask.shape) > 2 else 1
     fig, ax = plt.subplots(1, classes + 2)
     ax[0].set_title('Input image')
     ax[0].imshow(img)

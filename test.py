@@ -46,7 +46,6 @@ def predict_img(net,
     net.eval()
     img = torch.from_numpy(AttentionDataset.preprocess(full_img, scale_factor, is_mask=False))
     if addpositions: 
-        print("add positions")
         # Add normalized positions to input 
         _, w, h = img.shape
         x = torch.tensor(np.arange(h)/(h-1))
@@ -134,7 +133,6 @@ def diceuniqueclass(pred, gt, classvalue = 1):
     cardpred = np.sum(predones)
     cardgt = np.sum(gtones)
     inter = np.sum(predones*gtones)
-    print(cardpred + cardgt)
     return 2 * inter / (cardpred + cardgt)
 
 def dice(pred, gt, multiclass = True): 

@@ -20,18 +20,18 @@ os.environ['KMP_DUPLICATE_LIB_OK']='True'
 # CHOOSE INPUT DIRECTORIES 
 # imgdir = Path("../data/GTEA/frames")
 imgdir = Path('D:\\Master Thesis\\data\\KU\\train')
-# imgdir = Path('D:\\Master Thesis\\data\\KU\\test')
+imgdir = Path('D:\\Master Thesis\\data\\KU\\test')
 imgfilenames = [f for f in imgdir.glob('*.png') if f.is_file()] 
 # imgdir = Path("./data/imgs")
 gtdir = Path('D:\\Master Thesis\\data\\KU\\trainannot')
-# gtdir = Path('D:\\Master Thesis\\data\\KU\\testannot')
+gtdir = Path('D:\\Master Thesis\\data\\KU\\testannot')
 attmapdir = None # Path("./")
 # attmapdir = Path('D:\\Master Thesis\\data\\KU\\testannot')
 # attmapdir = Path("./data/attmaps")
 outdir = Path("./results/unet")
 
 dir_checkpoint = Path('./checkpoints')
-ckp = "U-Net-5-w-positions/tKU_bs16_e50_lr5e-1.pth" 
+ckp = "U-Net-5-w-positions/checkpoint_epoch_best.pth" 
 # ckp = "U-Net-3/tKU_bs16_e50_lr1e-1.pth" 
 
 
@@ -143,6 +143,7 @@ def dice(pred, gt, multiclass = True):
     if multiclass: 
         for i in range(pred.shape[0]): 
             meandice += diceuniqueclass(pred[i], gt, i)
+        meandice /= pred.shape[0]
     else: 
         meandice = diceuniqueclass(pred, gt, 1)
     return meandice 
@@ -180,7 +181,7 @@ if __name__ == '__main__':
     nchanToLoad = modelToLoad['inc.double_conv.0.weight'].shape[1]
     assert net.n_channels == nchanToLoad, \
         f"Number of input channels ({net.n_channels}) and loaded model ({nchanToLoad}) are not the same. Choose a different model to load."
-    net.load_state_dict(modelToLoad, strict=False)
+    net.load_state_dict(modelToLoad, strict=True)
     net.to(device=device)
 
     logging.info('Model loaded!')
@@ -212,7 +213,7 @@ if __name__ == '__main__':
         dice_score += dice(
             mask, 
             gt, 
-            multiclass=net.n_classes > 1)
+            multiclass=(net.n_classes > 1))
 
         if not args.no_save:
             out_filename = out_files[i]

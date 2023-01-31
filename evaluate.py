@@ -39,9 +39,6 @@ def evaluate(net, dataloader, device, useatt=False, addpos=False):
             else: 
                 mask_pred = net(image)
 
-            if addpos: 
-                mask_pred = mask_pred[:,:3,:,:]
-
             # convert to one-hot format
             if net.n_classes == 1:
                 mask_pred = (F.sigmoid(mask_pred) > 0.5).float()

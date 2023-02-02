@@ -10,7 +10,6 @@ import torch.nn.functional as F
 import wandb
 from torch import optim
 from torch.utils.data import DataLoader, random_split
-# from torchvision import transforms
 import albumentations as A
 from tqdm import tqdm
 

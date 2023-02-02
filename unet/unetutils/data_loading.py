@@ -95,7 +95,7 @@ class AttentionDataset(Dataset):
         #     assert img.size == mask.size, \
         #         f'Image and mask {name} should be the same size, but are {img.size} and {mask.size}'
         
-        # Apply data augmentations 
+        # Apply data augmentation 
         if self.geotransform: 
             if not self.withatt: 
                 transformed = self.geotransform(image=np.asarray(img), mask=np.asarray(mask))

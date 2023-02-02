@@ -20,11 +20,11 @@ os.environ['KMP_DUPLICATE_LIB_OK']='True'
 # CHOOSE INPUT DIRECTORIES 
 # imgdir = Path("../data/GTEA/frames")
 imgdir = Path('D:\\Master Thesis\\data\\KU\\train')
-imgdir = Path('D:\\Master Thesis\\data\\KU\\test')
+# imgdir = Path('D:\\Master Thesis\\data\\KU\\test')
 imgfilenames = [f for f in imgdir.glob('*.png') if f.is_file()] 
 # imgdir = Path("./data/imgs")
 gtdir = Path('D:\\Master Thesis\\data\\KU\\trainannot')
-gtdir = Path('D:\\Master Thesis\\data\\KU\\testannot')
+# gtdir = Path('D:\\Master Thesis\\data\\KU\\testannot')
 attmapdir = None # Path("./")
 # attmapdir = Path('D:\\Master Thesis\\data\\KU\\testannot')
 # attmapdir = Path("./data/attmaps")
@@ -43,7 +43,6 @@ def predict_img(net,
                 useatt: bool = False, 
                 full_attmap = None, 
                 addpositions: bool = False):
-    net.eval()
     img = torch.from_numpy(AttentionDataset.preprocess(full_img, scale_factor, is_mask=False))
     if addpositions: 
         # Add normalized positions to input 
@@ -183,6 +182,7 @@ if __name__ == '__main__':
         f"Number of input channels ({net.n_channels}) and loaded model ({nchanToLoad}) are not the same. Choose a different model to load."
     net.load_state_dict(modelToLoad, strict=True)
     net.to(device=device)
+    net.eval()
 
     logging.info('Model loaded!')
 

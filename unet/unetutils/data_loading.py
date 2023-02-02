@@ -22,8 +22,8 @@ class AttentionDataset(Dataset):
         assert 0 < scale <= 1, 'Scale must be between 0 and 1'
         self.scale = scale
         self.mask_suffix = mask_suffix
-        self.geotransform = transform['geometric']()
-        self.colortransform = transform['color']()
+        self.geotransform = transform['geometric']
+        self.colortransform = transform['color']
 
         self.ids = [splitext(file)[0] for file in listdir(images_dir) if not file.startswith('.')]
         if not self.ids:
@@ -82,6 +82,7 @@ class AttentionDataset(Dataset):
         if self.withatt: 
             assert len(attmap_file) == 1, f'Either no attention map or multiple attention maps found for the ID {name}: {attmap_file}.'
         
+        # Load the images 
         mask = self.load(mask_file[0])
         img = self.load(img_file[0])
         if self.withatt: 
@@ -94,22 +95,31 @@ class AttentionDataset(Dataset):
         #     assert img.size == mask.size, \
         #         f'Image and mask {name} should be the same size, but are {img.size} and {mask.size}'
         
+        # Apply data augmentations 
+        if self.geotransform: 
+            if not self.withatt: 
+                transformed = self.geotransform(image=np.asarray(img), mask=np.asarray(mask))
+            else: # self.withatt == True We use attention 
+                transformed = self.geotransform(image=np.asarray(img), mask=np.asarray(mask), attmap=np.asarray(mask))
+                attmap = Image.fromarray(transformed['attmap'])
+            img = Image.fromarray(transformed['image'])
+            mask = Image.fromarray(transformed['mask'])
+        
+        if self.colortransform: 
+            img = Image.fromarray(self.colortransform(image=np.asarray(img))['image'])
+        
+        # Preprocess the images to turn them into an array 
         img = self.preprocess(img, self.scale, is_mask=False)
         mask = self.preprocess(mask, self.scale, is_mask=True)
         if self.withatt: 
             attmap = self.preprocess(attmap, self.scale, is_mask=True)
-        
+
+        # Prepare getitem dictionary output with torch tensors 
         retdict = {}
         retdict['image'] = torch.as_tensor(img.copy()).float().contiguous()
         retdict['mask'] = torch.as_tensor(mask.copy()).long().contiguous()
         if self.withatt: 
             retdict['attmap'] = torch.as_tensor(attmap.copy()).long().contiguous()
-        
-        if self.geotransform: 
-            retdict = self.geotransform(retdict)
-        
-        if self.colortransform: 
-            retdict['image'] = self.colortransform(retdict['image'])
         
         retdict['index'] = idx+1
         return retdict

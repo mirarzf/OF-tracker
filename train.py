@@ -3,19 +3,19 @@ import logging
 import sys
 from pathlib import Path
 
+import numpy as np 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import wandb
 from torch import optim
 from torch.utils.data import DataLoader, random_split
-from torchvision import transforms
+# from torchvision import transforms
+import albumentations as A
 from tqdm import tqdm
-import numpy as np 
 
 from unet.unetutils.data_loading import BasicDataset, AttentionDataset
 from unet.unetutils.dice_score import dice_loss
-from unet.unetutils.data_augmentation import GeometricTransform, KUTransform
 from evaluate import evaluate
 from unet.unet_model import UNet, UNetAtt
 
@@ -46,9 +46,18 @@ def train_net(net,
               useatt: bool = False, 
               lossframesdecay: bool = False, 
               addpositions: bool = False):
-    # 1. Create dataset
-    dataaugtransform = {'geometric': GeometricTransform, 
-                        'color': KUTransform}
+    
+    # 1. Choose data augmentation transforms (using albumentations) and create dataset
+    geotransform = A.Compose([ 
+        A.HorizontalFlip(p=0.5)
+    ], 
+    additional_targets={'attmap':'mask'})
+    colortransform = A.Compose([ 
+        A.RandomBrightnessContrast(), 
+        A.ChannelShuffle()
+    ])
+    dataaugtransform = {'geometric': geotransform, 
+                        'color': colortransform}
     if useatt: 
         dataset = AttentionDataset(images_dir=dir_img, masks_dir=dir_mask, scale=img_scale, attmaps_dir=dir_attmap, transform = dataaugtransform)
     else: 

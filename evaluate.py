@@ -17,7 +17,7 @@ def evaluate(net, dataloader, device, useatt=False, addpos=False):
         image, mask_true = batch['image'], batch['mask']
         if addpos: 
             # Add absolute positions to input 
-            _, batchsize, w, h = image.shape
+            batchsize, _, w, h = image.shape
             x = torch.tensor(np.arange(h)/(h-1))
             y = torch.tensor(np.arange(w)/(w-1))
             grid_x, grid_y = torch.meshgrid(x, y, indexing='ij')

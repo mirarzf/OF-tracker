@@ -1,27 +1,41 @@
-import torch
-from torchvision import transforms as T 
-import torchvision.transforms.functional as F
 from PIL import Image
 from unet.unetutils.data_loading import AttentionDataset
 import numpy as np
+import albumentations as A 
+import matplotlib.pyplot as plt 
 
 
 img = Image.open('./data/imgs/gg4541_4629_extract_1.png')
-# img.show()
+img.show()
+mask = Image.open('./data/masks/gg4541_4629_extract_1.png')
+# mask.show()
+mask2 = Image.open('./data/masks/gg4541_4629_extract_2.png')
+# mask2.show()
 img2 = Image.open('./data/imgs/gg4541_4629_extract_1188.png')
 # img2.show()
 
+img = np.array(img)
+mask = np.array(mask)
+mask2 = np.array(mask2)
+print(img.shape)
+print(type(img),type(mask),type(mask2))
 
-img = torch.from_numpy(AttentionDataset.preprocess(img, 1, is_mask=False))
-_, w, h = img.shape
-x = torch.tensor(np.arange(h)/(h-1))
-y = torch.tensor(np.arange(w)/(w-1))
-grid_x, grid_y = torch.meshgrid(x, y, indexing='ij')
-print(img.size(), grid_x.size(), grid_y.size())
-grid_x = grid_x.repeat(1, 1, 1)
-grid_y = grid_y.repeat(1, 1, 1)
-print(grid_x)
-print(img.size(), grid_x.size(), grid_y.size(), "LE CALME AVANT LA TEMPETE")
-img = torch.cat((img, grid_x, grid_y), dim=0)
-print(img.size())
-print(img[:, 50, 50])
+geotransform = A.HorizontalFlip(p=1)
+geotransformtarg = A.Compose([geotransform], additional_targets={'attmap':'mask'})
+# transformed = geotransformtarg(image=img, mask=mask)
+print("yahoi")
+transformed = geotransformtarg(image=img, mask=mask, attmap=mask2)
+print(type(transformed))
+print(transformed.keys())
+img = Image.fromarray(transformed['image'])
+mask = Image.fromarray(transformed['mask'])
+mask2 = Image.fromarray(transformed['attmap'])
+img.show()
+# mask.show()
+# mask2.show()
+# print(transformed['masks'])
+
+colortrans = A.RandomBrightnessContrast(p=1)
+transformed = colortrans(image=np.asarray(img))
+img = Image.fromarray(transformed['image'])
+img.show()

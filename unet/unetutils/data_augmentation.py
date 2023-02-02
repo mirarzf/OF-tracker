@@ -1,35 +1,36 @@
 import torch 
 
+import albumentations as A
 import torchvision.transforms as T 
 import torchvision.transforms.functional as F
 
-class GeometricTransform:
+class GeometricTransform(A.augmentations.transforms):
     """
     Geometric transformations to apply for data augmentation 
     """
 
-    def __init__(self):
-        """
-        Only geometric transformations that are applied are: 
-        - Horizontal flipping (horizontal mirroring)
-        """
-        super().__init__()
-        self.transformslist = [
-            F.hflip
-        ]
+    # def __init__(self):
+    #     """
+    #     Only geometric transformations that are applied are: 
+    #     - Horizontal flipping (horizontal mirroring)
+    #     """
+    #     super().__init__()
+    #     self.transformslist = [
+    #         F.hflip
+    #     ]
         
 
-    def __call__(self, sampledict: dict):
-        retdict = {}
-        keys = sampledict.keys()
-        prob = torch.rand(len(self.transformslist))
-        for k in keys: 
-            retdict[k] = sampledict[k]
-        for t, p in zip(self.transformslist, prob): 
-            if p > 0.5: 
-                for k in keys: 
-                    retdict[k] = t(retdict[k])
-        return retdict
+    # def __call__(self, sampledict: dict):
+    #     retdict = {}
+    #     keys = sampledict.keys()
+    #     prob = torch.rand(len(self.transformslist))
+    #     for k in keys: 
+    #         retdict[k] = sampledict[k]
+    #     for t, p in zip(self.transformslist, prob): 
+    #         if p > 0.5: 
+    #             for k in keys: 
+    #                 retdict[k] = t(retdict[k])
+    #     return retdict
 
 class KUTransform:
     """

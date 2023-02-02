@@ -96,16 +96,16 @@ class AttentionDataset(Dataset):
         #         f'Image and mask {name} should be the same size, but are {img.size} and {mask.size}'
         
         # Apply data augmentation 
-        if self.geotransform: 
+        if self.geotransform != None: 
             if not self.withatt: 
                 transformed = self.geotransform(image=np.asarray(img), mask=np.asarray(mask))
             else: # self.withatt == True We use attention 
-                transformed = self.geotransform(image=np.asarray(img), mask=np.asarray(mask), attmap=np.asarray(mask))
+                transformed = self.geotransform(image=np.asarray(img), mask=np.asarray(mask), attmap=np.asarray(attmap))
                 attmap = Image.fromarray(transformed['attmap'])
             img = Image.fromarray(transformed['image'])
             mask = Image.fromarray(transformed['mask'])
         
-        if self.colortransform: 
+        if self.colortransform != None: 
             img = Image.fromarray(self.colortransform(image=np.asarray(img))['image'])
         
         # Preprocess the images to turn them into an array 

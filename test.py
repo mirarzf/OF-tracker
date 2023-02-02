@@ -20,11 +20,11 @@ os.environ['KMP_DUPLICATE_LIB_OK']='True'
 # CHOOSE INPUT DIRECTORIES 
 # imgdir = Path("../data/GTEA/frames")
 imgdir = Path('D:\\Master Thesis\\data\\KU\\train')
-# imgdir = Path('D:\\Master Thesis\\data\\KU\\test')
+imgdir = Path('D:\\Master Thesis\\data\\KU\\test')
 imgfilenames = [f for f in imgdir.glob('*.png') if f.is_file()] 
 # imgdir = Path("./data/imgs")
 gtdir = Path('D:\\Master Thesis\\data\\KU\\trainannot')
-# gtdir = Path('D:\\Master Thesis\\data\\KU\\testannot')
+gtdir = Path('D:\\Master Thesis\\data\\KU\\testannot')
 attmapdir = None # Path("./")
 # attmapdir = Path('D:\\Master Thesis\\data\\KU\\testannot')
 # attmapdir = Path("./data/attmaps")
@@ -32,7 +32,7 @@ outdir = Path("./results/unet")
 
 dir_checkpoint = Path('./checkpoints')
 ckp = "U-Net-5-w-positions/checkpoint_epoch_best.pth" 
-# ckp = "U-Net-3/tKU_bs16_e50_lr1e-1.pth" 
+ckp = "U-Net-5-w-positions/tKU_bs16_e50_lr1e-1_old.pth" 
 
 
 def predict_img(net,
@@ -71,6 +71,7 @@ def predict_img(net,
             probs = F.softmax(output, dim=1)[0]
         else:
             probs = torch.sigmoid(output)[0]
+            print(probs)
 
         tf = transforms.Compose([
             transforms.ToPILImage(),
@@ -127,11 +128,10 @@ def mask_to_image(mask: np.ndarray):
 
 def diceuniqueclass(pred, gt, classvalue = 1): 
     assert pred.shape[0] == gt.shape[0] and pred.shape[1] == gt.shape[1]
-    predones = np.where(pred == classvalue, 1, 0)
     gtones = np.where(gt == classvalue, 1, 0)
-    cardpred = np.sum(predones)
+    cardpred = np.sum(pred)
     cardgt = np.sum(gtones)
-    inter = np.sum(predones*gtones)
+    inter = np.sum(pred*gtones)
     return 2 * inter / (cardpred + cardgt)
 
 def dice(pred, gt, multiclass = True): 

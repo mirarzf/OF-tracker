@@ -13,7 +13,7 @@ from torchvision import transforms
 
 
 class AttentionDataset(Dataset): 
-    def __init__(self, images_dir: str, masks_dir: str, scale: float = 1.0, mask_suffix: str = '', transform = None, attmaps_dir: str = '', withatt: bool = True):
+    def __init__(self, images_dir: str, masks_dir: str, scale: float = 1.0, mask_suffix: str = '', transform = dict(), attmaps_dir: str = '', withatt: bool = True):
         self.withatt = withatt
 
         self.images_dir = Path(images_dir)
@@ -22,8 +22,14 @@ class AttentionDataset(Dataset):
         assert 0 < scale <= 1, 'Scale must be between 0 and 1'
         self.scale = scale
         self.mask_suffix = mask_suffix
-        self.geotransform = transform['geometric']
-        self.colortransform = transform['color']
+        if 'geometric' in transform.keys(): 
+            self.geotransform = transform['geometric']
+        else: 
+            self.geotransform = None
+        if 'color' in transform.keys(): 
+            self.colortransform = transform['color']
+        else: 
+            self.colortransform = None 
 
         self.ids = [splitext(file)[0] for file in listdir(images_dir) if not file.startswith('.')]
         if not self.ids:
@@ -107,7 +113,7 @@ class AttentionDataset(Dataset):
         
         if self.colortransform != None: 
             img = Image.fromarray(self.colortransform(image=np.asarray(img))['image'])
-        
+
         # Preprocess the images to turn them into an array 
         img = self.preprocess(img, self.scale, is_mask=False)
         mask = self.preprocess(mask, self.scale, is_mask=True)
@@ -125,16 +131,16 @@ class AttentionDataset(Dataset):
         return retdict
 
 class BasicDataset(AttentionDataset): 
-    def __init__(self, images_dir: str, masks_dir: str, scale: float = 1, mask_suffix: str = '', transform = None, attmaps_dir: str = '', withatt: bool = True):
+    def __init__(self, images_dir: str, masks_dir: str, scale: float = 1, mask_suffix: str = '', transform = dict(), attmaps_dir: str = '', withatt: bool = True):
         super().__init__(images_dir, masks_dir, scale, mask_suffix, transform, attmaps_dir, withatt=False)
 
 
 class CarvanaDataset(BasicDataset):
-    def __init__(self, images_dir, masks_dir, scale=1, transform = None):
+    def __init__(self, images_dir, masks_dir, scale=1, transform = dict()):
         super().__init__(images_dir, masks_dir, scale, mask_suffix='_mask', transform=transform)
 
 class MaskDataset(AttentionDataset): 
-    def __init__(self, images_dir: str, masks_dir: str, scale: float = 1, mask_suffix: str = '', transform = None, attmaps_dir: str = '', withatt: bool = True):
+    def __init__(self, images_dir: str, masks_dir: str, scale: float = 1, mask_suffix: str = '', transform = dict(), attmaps_dir: str = '', withatt: bool = True):
         super().__init__(images_dir, masks_dir, scale, mask_suffix, transform, attmaps_dir, withatt)
 
     def __getitem__(self, idx):

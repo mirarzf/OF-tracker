@@ -46,7 +46,7 @@ def train_net(net,
               lossframesdecay: bool = False, 
               addpositions: bool = False):
     
-    # 1. Choose data augmentation transforms (using albumentations) and create dataset
+    # 1. Choose data augmentation transforms (using albumentations) 
     geotransform = A.Compose([ 
         A.HorizontalFlip(p=0.5)
     ], 
@@ -56,27 +56,31 @@ def train_net(net,
     ])
     dataaugtransform = {'geometric': geotransform, 
                         'color': colortransform}
+    dataaugtransform = dict() ################################################### COMMENT IF YOU WANT DATA AUGMENTATION 
+    
+    # 2. Create dataset
     if useatt: 
         dataset = AttentionDataset(images_dir=dir_img, masks_dir=dir_mask, scale=img_scale, attmaps_dir=dir_attmap, transform = dataaugtransform)
     else: 
         dataset = BasicDataset(images_dir=dir_img, masks_dir=dir_mask, scale=img_scale, transform = dataaugtransform)
 
-    # 2. Split into train / validation partitions
+    # 3. Split into train / validation partitions
     n_val = int(len(dataset) * val_percent)
     n_train = len(dataset) - n_val
     train_set, val_set = random_split(dataset, [n_train, n_val], generator=torch.Generator().manual_seed(0))
 
-    # 3. Create data loaders
+    # 4. Create data loaders
     loader_args = dict(num_workers=4, pin_memory=True)
     train_loader = DataLoader(train_set, shuffle=True, batch_size=batch_size, **loader_args)
     val_loader = DataLoader(val_set, shuffle=False, drop_last=True, batch_size=min(batch_size, n_val), **loader_args)
 
     # (Initialize logging)
-    project_name = 'U-Net'
-    if useatt: 
-        project_name += '-w-attention'
-    if addpositions: 
-        project_name += '-w-positions'
+    # project_name = 'U-Net'
+    # if useatt: 
+    #     project_name += '-w-attention'
+    # if addpositions: 
+    #     project_name += '-w-positions'
+    project_name = "OF-Tracker"
     experiment = wandb.init(project=project_name, resume='allow', anonymous='must')
     experiment.config.update(dict(
         epochs=epochs, 
@@ -86,11 +90,14 @@ def train_net(net,
         save_checkpoint=save_checkpoint, 
         img_scale=img_scale, 
         amp=amp, 
-        use_attention=useatt
+        use_attention=useatt, 
+        use_positions=addpositions, 
+        augmented_data=(True if 'geometric' in dataaugtransform.keys() else False)
         ))
 
     logging.info(f'''Starting training:
         Attention model: {useatt}
+        Positions input: {addpositions}
         Epochs:          {epochs}
         Batch size:      {batch_size}
         Learning rate:   {learning_rate}
@@ -102,7 +109,7 @@ def train_net(net,
         Mixed Precision: {amp}
     ''')
 
-    # 4. Set up the optimizer, the loss, the learning rate scheduler and the loss scaling for AMP
+    # 5. Set up the optimizer, the loss, the learning rate scheduler and the loss scaling for AMP
     # optimizer = optim.RMSprop(net.parameters(), lr=learning_rate, weight_decay=1e-2, momentum=0.9) # VANILLA SETTINGS: net.parameters(), lr=learning_rate, weight_decay=1e-8, momentum=0.9
     optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=0.9)
     # scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=2)  # goal: maximize Dice score
@@ -113,7 +120,7 @@ def train_net(net,
     # criterion = nn.BCELoss() # GROUND TRUTH = SOFT MAPS 
     global_step = 0
 
-    # 5. Begin training
+    # 6. Begin training
     for epoch in range(1, epochs+1):
         net.train()
         epoch_loss = 0
@@ -182,6 +189,7 @@ def train_net(net,
                 pbar.set_postfix(**{'loss (batch)': loss.item()})
 
             # Evaluation round (validation testing at the end of epoch)
+            net.eval()
             histograms = {}
             for tag, value in net.named_parameters():
                 tag = tag.replace('/', '.')
@@ -193,6 +201,7 @@ def train_net(net,
             val_score = evaluate(net, val_loader, device, useatt=useatt, addpos=addpositions)
             epoch_dice += val_score
             # scheduler.step(val_score)
+            net.train()
 
             logging.info('Validation Dice score: {}'.format(val_score))
             experiment.log({
@@ -211,7 +220,7 @@ def train_net(net,
         epoch_loss /= len(train_loader)
         scheduler.step() # Change learning rate 
 
-        # 6. (Optional) Save checkpoint at each epoch 
+        # 7. (Optional) Save checkpoint at each epoch 
         
         if save_checkpoint or save_best_checkpoint:
             adddirckp = 'U-Net-' + str(net.n_channels)
@@ -227,7 +236,7 @@ def train_net(net,
             torch.save(net.state_dict(), str(dirckp / 'checkpoint_epoch{}.pth'.format(epoch)))
             logging.info(f'Checkpoint {epoch} saved!')
         
-        # 7. (Optional) Save best model 
+        # 8. (Optional) Save best model 
         if save_best_checkpoint: 
             if epoch == 1: 
                 best_loss = epoch_loss 
@@ -244,7 +253,7 @@ def train_net(net,
             
             logging.info('Epoch loss: {}'.format(best_loss))
 
-        # 8. Log all the previous parameters 
+        # 9. Log all the previous parameters 
         experiment.log({
             'epoch': epoch, 
             'best epoch': best_ckpt, 

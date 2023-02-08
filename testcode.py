@@ -40,8 +40,18 @@ import matplotlib.pyplot as plt
 # img = Image.fromarray(transformed['image'])
 # img.show()
 
-A = np.ones((3,3))
-B = 2*A
-print(A)
-print(B)
-print(A*B)
+# A = np.ones((3,3))
+# B = 2*A
+# print(A)
+# print(B)
+# print(A*B)
+
+import wandb
+api = wandb.Api()
+# run = api.run("mirarzf/OF-Tracker/runs/1egwkl65/")
+# run.config["use_positions"] = False
+# run.update()
+runs = api.runs(path="mirarzf/OF-Tracker")
+for run in runs: 
+    run.config["augmented_data"] = True
+    run.update()

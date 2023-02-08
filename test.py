@@ -13,17 +13,18 @@ from unet.unetutils.data_loading import AttentionDataset
 from unet.unet_model import UNet, UNetAtt
 from unet.unetutils.utils import plot_img_and_mask_and_gt
 
+import matplotlib.pyplot as plt 
 
 import os
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
 # CHOOSE INPUT DIRECTORIES 
 # imgdir = Path("../data/GTEA/frames")
-imgdir = Path('D:\\Master Thesis\\data\\KU\\train')
+# imgdir = Path('D:\\Master Thesis\\data\\KU\\train')
 imgdir = Path('D:\\Master Thesis\\data\\KU\\test')
 imgfilenames = [f for f in imgdir.glob('*.png') if f.is_file()] 
 # imgdir = Path("./data/imgs")
-gtdir = Path('D:\\Master Thesis\\data\\KU\\trainannot')
+# gtdir = Path('D:\\Master Thesis\\data\\KU\\trainannot')
 gtdir = Path('D:\\Master Thesis\\data\\KU\\testannot')
 attmapdir = None # Path("./")
 # attmapdir = Path('D:\\Master Thesis\\data\\KU\\testannot')
@@ -34,7 +35,7 @@ dir_checkpoint = Path('./checkpoints')
 ckp = "U-Net-5-w-positions/checkpoint_epoch_best.pth" 
 ckp = "U-Net-3/checkpoint_epoch_best.pth" 
 # ckp = "U-Net-5-w-positions/tKU_bs16_e50_lr5e-1_1.pth" 
-# ckp = "U-Net-3/tKU_bs16_e50_lr1e-1.pth" 
+# ckp = "U-Net-3/tKU_nda_bs16_e50_lr1e-1.pth" 
 
 
 def predict_img(net,
@@ -71,9 +72,10 @@ def predict_img(net,
 
         if net.n_classes > 1:
             probs = F.softmax(output, dim=1)[0]
+            print(probs[:,150:155,150:155])
         else:
             probs = torch.sigmoid(output)[0]
-            print(probs)
+            print(probs[:,150:155,150:155])
 
         tf = transforms.Compose([
             transforms.ToPILImage(),
@@ -81,7 +83,13 @@ def predict_img(net,
             transforms.ToTensor()
         ])
 
+        print(torch.max(probs), torch.min(probs))
         full_mask = tf(probs.cpu()).squeeze()
+        # PRINT HISTOGRAMS OF THE VALUES -- DEBUG HISTOGRAMS 
+        plt.hist(full_mask[0].numpy().flatten(), bins=256)
+        plt.hist(full_mask[1].numpy().flatten(), bins=256)
+        plt.show()
+        print(torch.max(full_mask), torch.min(full_mask))
 
     if net.n_classes == 1:
         return (full_mask > out_threshold).numpy()
@@ -211,6 +219,7 @@ if __name__ == '__main__':
         gt = np.asarray(gt)
         thres = 0
         gt = np.where(gt > thres, 1, 0)[:,:,0]
+        print("yo", np.unique(mask))
 
         dice_score += dice(
             mask, 

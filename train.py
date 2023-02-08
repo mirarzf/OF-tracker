@@ -56,7 +56,7 @@ def train_net(net,
     ])
     dataaugtransform = {'geometric': geotransform, 
                         'color': colortransform}
-    dataaugtransform = dict() ################################################### COMMENT IF YOU WANT DATA AUGMENTATION 
+    # dataaugtransform = dict() ################################################### COMMENT IF YOU WANT DATA AUGMENTATION 
     
     # 2. Create dataset
     if useatt: 

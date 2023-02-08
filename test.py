@@ -35,7 +35,7 @@ dir_checkpoint = Path('./checkpoints')
 ckp = "U-Net-5-w-positions/checkpoint_epoch_best.pth" 
 ckp = "U-Net-3/checkpoint_epoch_best.pth" 
 # ckp = "U-Net-5-w-positions/tKU_bs16_e50_lr5e-1_1.pth" 
-# ckp = "U-Net-3/tKU_nda_bs16_e50_lr1e-1.pth" 
+# ckp = "U-Net-3/tKU_bs16_e50_lr1e-1_1.pth" 
 
 
 def predict_img(net,
@@ -71,11 +71,12 @@ def predict_img(net,
             output = net(img)
 
         if net.n_classes > 1:
+            # print(output)
             probs = F.softmax(output, dim=1)[0]
-            print(probs[:,150:155,150:155])
+            # print(probs[:,150:155,150:155])
         else:
             probs = torch.sigmoid(output)[0]
-            print(probs[:,150:155,150:155])
+            # print(probs[:,150:155,150:155])
 
         tf = transforms.Compose([
             transforms.ToPILImage(),
@@ -85,11 +86,17 @@ def predict_img(net,
 
         print(torch.max(probs), torch.min(probs))
         full_mask = tf(probs.cpu()).squeeze()
-        # PRINT HISTOGRAMS OF THE VALUES -- DEBUG HISTOGRAMS 
+        # PRINT HISTOGRAMS OF THE VALUES -- DEBUG HISTOGRAMS ########################################################## 
         plt.hist(full_mask[0].numpy().flatten(), bins=256)
         plt.hist(full_mask[1].numpy().flatten(), bins=256)
         plt.show()
-        print(torch.max(full_mask), torch.min(full_mask))
+        # sumarray = full_mask[0].numpy() + full_mask[1].numpy()
+        # print(np.min(sumarray), np.max(sumarray))
+        # plt.imshow(sumarray, cmap='hot')
+        # plt.colorbar()
+        # plt.show()
+        # print(sumarray.shape)
+        # print(torch.max(full_mask), torch.min(full_mask))
 
     if net.n_classes == 1:
         return (full_mask > out_threshold).numpy()
@@ -218,8 +225,8 @@ if __name__ == '__main__':
         gt = Image.open(in_files_gt[i])
         gt = np.asarray(gt)
         thres = 0
+        print(gt.shape)
         gt = np.where(gt > thres, 1, 0)[:,:,0]
-        print("yo", np.unique(mask))
 
         dice_score += dice(
             mask, 

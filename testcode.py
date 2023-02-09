@@ -46,12 +46,28 @@ import matplotlib.pyplot as plt
 # print(B)
 # print(A*B)
 
-import wandb
-api = wandb.Api()
-# run = api.run("mirarzf/OF-Tracker/runs/1egwkl65/")
-# run.config["use_positions"] = False
-# run.update()
-runs = api.runs(path="mirarzf/OF-Tracker")
-for run in runs: 
-    run.config["augmented_data"] = True
-    run.update()
+# import wandb
+# api = wandb.Api()
+# # run = api.run("mirarzf/OF-Tracker/runs/1egwkl65/")
+# # run.config["use_positions"] = False
+# # run.update()
+# runs = api.runs(path="mirarzf/OF-Tracker")
+# for run in runs: 
+#     run.config["augmented_data"] = True
+#     run.update()
+
+import numpy as np 
+import torch
+import torch.nn.functional as F
+a = -0.265468*np.ones((2,2,3))
+a[0,0,0] = 1
+a[1,1,2] = 2
+a[0,0,1] = 1
+a[1,0,1] = 1
+a[0,1,0] = 0.1554
+print(a)
+a = torch.from_numpy(a)
+print(F.softmax(a,dim=1).argmax(dim=1))
+print(a.argmax(dim=1))
+print(a.argmax(dim=0))
+print(np.argmax(a.numpy(), axis=0))

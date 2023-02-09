@@ -217,6 +217,7 @@ def train_net(net,
                 'epoch': epoch,
                 **histograms
             })
+            
         epoch_loss /= len(train_loader)
         scheduler.step() # Change learning rate 
 

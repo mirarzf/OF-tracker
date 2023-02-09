@@ -10,7 +10,7 @@ def plot_img_and_mask(img, mask):
     if classes > 1:
         for i in range(classes):
             ax[i + 1].set_title(f'Output mask (class {i + 1})')
-            ax[i + 1].imshow(256*mask[i, :, :], cmap='gray', vmin=0, vmax=255)
+            ax[i + 1].imshow(255*mask[i, :, :], cmap='gray', vmin=0, vmax=255)
     else:
         ax[1].set_title(f'Output mask')
         ax[1].imshow(mask, cmap='gray')
@@ -29,7 +29,7 @@ def plot_img_and_mask_and_gt(img, gt, mask):
     if classes > 1:
         for i in range(classes):
             ax[i + 2].set_title(f'Output mask (class {i + 1})')
-            ax[i + 2].imshow(mask[i, :, :], cmap='gray', vmin=0, vmax=1)
+            ax[i + 2].imshow(255*mask[i, :, :], cmap='gray', vmin=0, vmax=255)
     else:
         ax[2].set_title(f'Output mask')
         ax[2].imshow(mask, cmap='gray', vmin=0, vmax=1)

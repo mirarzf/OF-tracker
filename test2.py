@@ -13,8 +13,6 @@ from unet.unetutils.data_loading import AttentionDataset
 from unet.unet_model import UNet, UNetAtt
 from unet.unetutils.utils import plot_img_and_mask_and_gt
 
-from unet.unetutils.dice_score import multiclass_dice_coeff, dice_coeff
-
 import matplotlib.pyplot as plt 
 
 import os
@@ -35,10 +33,10 @@ outdir = Path("./results/unet")
 
 dir_checkpoint = Path('./checkpoints')
 ckp = "U-Net-5-w-positions/checkpoint_epoch_best.pth" 
-ckp = "U-Net-3/checkpoint_epoch_best.pth" 
+# ckp = "U-Net-3/checkpoint_epoch_best.pth" 
 # ckp = "U-Net-5-w-positions/tKU_bs16_e50_lr5e-1_1.pth" 
-ckp = "U-Net-3/tKU_bs16_e50_lr1e-2.pth" 
-ckp = "U-Net-3/checkpoint_botched.pth" # bs16_e50_lr1e-2_2
+# ckp = "U-Net-3/tKU_bs16_e50_lr1e-2.pth" 
+# ckp = "U-Net-3/checkpoint_botched.pth" # bs16_e50_lr1e-2_2
 
 
 def predict_img(net,
@@ -49,7 +47,7 @@ def predict_img(net,
                 useatt: bool = False, 
                 full_attmap = None, 
                 addpositions: bool = False):
-    img = torch.from_numpy(full_img)
+    img = torch.from_numpy(AttentionDataset.preprocess(full_img, scale_factor, is_mask=False))
     if addpositions: 
         # Add normalized positions to input 
         _, w, h = img.shape
@@ -63,7 +61,7 @@ def predict_img(net,
     img = img.to(device=device, dtype=torch.float32)
 
     if useatt: 
-        attmap = torch.from_numpy(attmap)
+        attmap = torch.from_numpy(AttentionDataset.preprocess(full_attmap, scale_factor, is_mask=True))
         attmap = attmap.unsqueeze(0)
         attmap = attmap.to(device=device, dtype=torch.float32)
 
@@ -73,28 +71,54 @@ def predict_img(net,
         else: 
             output = net(img)
         # PRINT HISTOGRAMS OF THE VALUES -- DEBUG HISTOGRAMS ########################################################## 
-        plt.hist(output[:,0].cpu().numpy().flatten(), bins=256)
-        plt.hist(output[:,1].cpu().numpy().flatten(), bins=256)
+        plt.hist(output[:,0].cpu().numpy().flatten())
+        plt.hist(output[:,1].cpu().numpy().flatten())
+        plt.title("output")
         plt.show()
-        print(output.size(), "c'est la size du output")
-        print(f"min: {torch.min(output)} et max: {torch.max(output)}")
 
-        # convert to one-hot format
-        if net.n_classes == 1:
-            mask_pred = (F.sigmoid(output) > out_threshold).float()
+        if net.n_classes > 1:
+            # print(output)
+            probs = torch.ones(output.size())
+            for i in range(net.n_classes): 
+                probs[0,i, ...] = torch.sigmoid(output[0,i, ...])
+                probs[0,i, ...] = F.normalize(probs[0,i, ...])
+            # probs = F.normalize(probs, dim=1)
+            plt.hist(probs[0,0].cpu().numpy().flatten())
+            plt.hist(probs[0,1].cpu().numpy().flatten())
+            plt.title("probs")
+            plt.show()
+            probs = F.softmax(probs, dim=1).cpu()
+            # probs = output.cpu()
+            print(probs.size())
+            # print(probs[:,150:155,150:155])
         else:
-            mask_pred = F.softmax(output, dim=1).float()
-            # mask_pred = output 
-            # for i in range(net.n_classes): 
-            #     mask_pred[:,i, ...] = F.sigmoid(output[:,i, ...])
-            mask_pred = F.one_hot(mask_pred.argmax(dim=1), net.n_classes).permute(0, 3, 1, 2).float()
-        
-        # PRINT HISTOGRAMS OF THE VALUES -- DEBUG HISTOGRAMS ########################################################## 
-        plt.hist(mask_pred[:,0].cpu().numpy().flatten(), bins=256)
-        plt.hist(mask_pred[:,1].cpu().numpy().flatten(), bins=256)
+            probs = torch.sigmoid(output).cpu()
+            # print(probs[:,150:155,150:155])
+        plt.hist(probs[0,0].cpu().numpy().flatten())
+        plt.hist(probs[0,1].cpu().numpy().flatten())
+        plt.title("probs")
         plt.show()
-        return mask_pred.cpu()
+        print(torch.max(probs), torch.min(probs))
 
+        # tf = transforms.Compose([
+        #     transforms.ToPILImage(),
+        #     transforms.Resize((full_img.size[1], full_img.size[0])),
+        #     transforms.ToTensor()
+        # ])
+
+        # full_mask = tf(probs.cpu()).squeeze()
+        full_mask = F.interpolate(probs, (full_img.size[1], full_img.size[0]), mode='nearest-exact').cpu().squeeze()
+        plt.hist(full_mask[0].cpu().numpy().flatten())
+        plt.hist(full_mask[1].cpu().numpy().flatten())
+        plt.title("full_mask")
+        print(full_mask.size())
+        plt.show()
+        print(torch.max(probs), torch.min(probs))
+
+    if net.n_classes == 1:
+        return (full_mask > out_threshold).numpy()
+    else:
+        return F.one_hot(full_mask.argmax(dim=0), net.n_classes).permute(2, 0, 1).numpy()
 
 
 def get_args():
@@ -130,12 +154,33 @@ def get_attmap_filenames(args):
     else: 
         return args.input_att 
 
-def mask_to_image(mask: np.ndarray, size: tuple):
-    print(mask.shape, "ihi")
+def mask_to_image(mask: np.ndarray):
     if mask.ndim == 2:
-        return Image.fromarray((mask * 255).astype(np.uint8)).resize(size)
+        return Image.fromarray((mask * 255).astype(np.uint8))
     elif mask.ndim == 3:
-        return Image.fromarray((np.argmax(mask, axis=0) * 255 / mask.shape[0]).astype(np.uint8)).resize(size)
+        return Image.fromarray((np.argmax(mask, axis=0) * 255 / mask.shape[0]).astype(np.uint8))
+
+def diceuniqueclass(pred, gt, classvalue = 1): 
+    assert pred.shape[0] == gt.shape[0] and pred.shape[1] == gt.shape[1]
+    gtones = np.where(gt == classvalue, 1, 0)
+    cardpred = np.sum(pred)
+    cardgt = np.sum(gtones)
+    inter = np.sum(pred*gtones)
+    return 2 * inter / (cardpred + cardgt)
+
+def dice(pred, gt, multiclass = True): 
+    ''' 
+    Input is in shape [C, H, W] with C equals to number of classes 
+    '''
+    meandice = 0 
+    if multiclass: 
+        for i in range(1,pred.shape[0]): 
+            meandice += diceuniqueclass(pred[i], gt, i)
+        meandice /= pred.shape[0]
+    else: 
+        meandice = diceuniqueclass(pred, gt, 1)
+    return meandice 
+
 
 if __name__ == '__main__':
     args = get_args()
@@ -180,12 +225,8 @@ if __name__ == '__main__':
     for i, filename in enumerate(tqdm(in_files)):
         logging.info(f'\nPredicting image {filename} ...')
         img = Image.open(filename)
-        originalsize = img.size
-        print(img.size)
-        img = AttentionDataset.preprocess(img, scale=args.scale, is_mask=False)
         if useatt: 
             attmap = Image.open(in_files_att[i])
-            attmap = AttentionDataset.preprocess(attmap, scale=args.scale, is_mask=True)
         else: 
             attmap = None 
 
@@ -199,24 +240,19 @@ if __name__ == '__main__':
                            addpositions=args.wpos)
         
         gt = Image.open(in_files_gt[i])
-        gt = AttentionDataset.preprocess(gt, scale=args.scale, is_mask=True)
-        gt = gt[np.newaxis,:,:]
-        print("that gt shape", gt.shape)
-        gtdice = torch.as_tensor(gt.copy()).long().contiguous()
-        gtdice = F.one_hot(gtdice, net.n_classes).permute(0, 3, 1, 2).float()
+        gt = np.asarray(gt)
+        thres = 0
+        print(gt.shape)
+        gt = np.where(gt > thres, 1, 0)[:,:,0]
 
-        print("yo mask size BIS", mask.shape)
-
-        if net.n_classes == 1: 
-            dice_score += dice_coeff(mask, gtdice, reduce_batch_first=False)
-        else: 
-            dice_score += multiclass_dice_coeff(mask[:,1:, ...], gtdice[:,1:, ...], reduce_batch_first=False)
-        
-        mask = np.argmax(mask.squeeze().numpy(), axis=0)
+        dice_score += dice(
+            mask, 
+            gt, 
+            multiclass=(net.n_classes > 1))
 
         if not args.no_save:
             out_filename = out_files[i]
-            result = mask_to_image(mask, originalsize)
+            result = mask_to_image(mask)
             result.save(out_filename)
             logging.info(f'Mask saved to {out_filename}')
 

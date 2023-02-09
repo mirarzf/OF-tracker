@@ -78,10 +78,7 @@ def predict_img(net,
 
         if net.n_classes > 1:
             # print(output)
-            probs = torch.ones(output.size())
-            for i in range(net.n_classes): 
-                probs[0,i, ...] = torch.sigmoid(output[0,i, ...])
-            probs = F.softmax(probs, dim=1).cpu()
+            probs = F.softmax(output, dim=1).cpu()
             # probs = output.cpu()
             print(probs.size())
             # print(probs[:,150:155,150:155])

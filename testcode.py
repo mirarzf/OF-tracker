@@ -59,15 +59,19 @@ import matplotlib.pyplot as plt
 import numpy as np 
 import torch
 import torch.nn.functional as F
-a = -0.265468*np.ones((2,2,3))
-a[0,0,0] = 1
-a[1,1,2] = 2
-a[0,0,1] = 1
-a[1,0,1] = 1
-a[0,1,0] = 0.1554
-print(a)
-a = torch.from_numpy(a)
-print(F.softmax(a,dim=1).argmax(dim=1))
-print(a.argmax(dim=1))
-print(a.argmax(dim=0))
-print(np.argmax(a.numpy(), axis=0))
+b = torch.tensor([[[0, 1], [0, 3]]])
+print(b)
+
+c =F.one_hot(b, 4) 
+print(c)
+print(c.size())
+d = c.permute(0,3,1,2)
+print(d)
+print(d.size())
+print(b.size())
+
+print(d[:,0])
+
+e = d.squeeze(0)
+print(d.size())
+print(e.size())

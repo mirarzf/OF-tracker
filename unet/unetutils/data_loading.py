@@ -11,6 +11,10 @@ from torch.utils.data import Dataset
 # from unet.unetutils.data_augmentation import KUTransform
 from torchvision import transforms
 
+# REPRODUCIBILITY 
+torch.manual_seed(0)
+
+
 
 class AttentionDataset(Dataset): 
     def __init__(self, images_dir: str, masks_dir: str, scale: float = 1.0, mask_suffix: str = '', transform = dict(), attmaps_dir: str = '', withatt: bool = True):

@@ -21,8 +21,6 @@ from unet.unet_model import UNet, UNetAtt
 # REPRODUCIBILITY 
 torch.manual_seed(0)
 
-import matplotlib.pyplot as plt 
-
 # dir_img = Path('./data/imgs/')
 dir_img = Path('D:\\Master Thesis\\data\\KU\\train')
 # dir_img = Path('D:\\Master Thesis\\data\\GTEA\\GTEA\\train')
@@ -162,12 +160,6 @@ def train_net(net,
                         masks_pred = net(images, attention_maps)
                     else: 
                         masks_pred = net(images)
-                    
-                    print(masks_pred.size())
-                    plt.hist(masks_pred[0,0].cpu().detach().numpy().flatten())
-                    plt.hist(masks_pred[0,1].cpu().detach().numpy().flatten())
-                    plt.title("histogrammes de mask_pred[0]")
-                    plt.show()
                     
                     if net.n_classes == 1:
                         loss = criterion(masks_pred.squeeze(1), true_masks.float())

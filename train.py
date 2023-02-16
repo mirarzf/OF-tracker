@@ -20,6 +20,8 @@ from unet.unet_model import UNet, UNetAtt
 
 # REPRODUCIBILITY 
 torch.manual_seed(0)
+import random
+random.seed(0)
 
 # dir_img = Path('./data/imgs/')
 dir_img = Path('D:\\Master Thesis\\data\\KU\\train')

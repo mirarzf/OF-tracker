@@ -193,7 +193,8 @@ def train_net(net,
                     if lossframesdecay: 
                         loss /= index 
 
-                optimizer.zero_grad(set_to_none=True)
+                # optimizer.zero_grad(set_to_none=True)
+                optimizer.zero_grad()
                 grad_scaler.scale(loss).backward()
                 grad_scaler.step(optimizer)
                 grad_scaler.update()

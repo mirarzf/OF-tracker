@@ -8,12 +8,10 @@ import torch
 from PIL import Image
 from torch.utils.data import Dataset
 
-# from unet.unetutils.data_augmentation import KUTransform
-from torchvision import transforms
-
 # REPRODUCIBILITY 
-torch.manual_seed(0)
-
+torch.manual_seed(1188)
+import random
+random.seed(1188)
 
 
 class AttentionDataset(Dataset): 

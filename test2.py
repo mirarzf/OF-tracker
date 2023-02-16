@@ -33,7 +33,7 @@ outdir = Path("./results/unet")
 
 dir_checkpoint = Path('./checkpoints')
 ckp = "U-Net-5-w-positions/checkpoint_epoch_best.pth" 
-# ckp = "U-Net-3/checkpoint_epoch_best.pth" 
+ckp = "U-Net-3/checkpoint_epoch_best.pth" 
 # ckp = "U-Net-5-w-positions/tKU_bs16_e50_lr5e-1_1.pth" 
 # ckp = "U-Net-3/tKU_bs16_e50_lr1e-2.pth" 
 # ckp = "U-Net-3/checkpoint_botched.pth" # bs16_e50_lr1e-2_2

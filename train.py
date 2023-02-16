@@ -18,6 +18,11 @@ from unet.unetutils.dice_score import dice_loss
 from evaluate import evaluate
 from unet.unet_model import UNet, UNetAtt
 
+# REPRODUCIBILITY 
+torch.manual_seed(0)
+
+import matplotlib.pyplot as plt 
+
 # dir_img = Path('./data/imgs/')
 dir_img = Path('D:\\Master Thesis\\data\\KU\\train')
 # dir_img = Path('D:\\Master Thesis\\data\\GTEA\\GTEA\\train')
@@ -124,7 +129,6 @@ def train_net(net,
     for epoch in range(1, epochs+1):
         net.train()
         epoch_loss = 0
-        epoch_dice = 0 
         with tqdm(total=n_train, desc=f'Epoch {epoch}/{epochs}', unit='img') as pbar:
             for batch in train_loader:
                 images = batch['image']
@@ -154,7 +158,17 @@ def train_net(net,
                     attention_maps = attention_maps.to(device=device, dtype=torch.float32)
 
                 with torch.cuda.amp.autocast(enabled=amp):
-                    masks_pred = net(images)
+                    if useatt: 
+                        masks_pred = net(images, attention_maps)
+                    else: 
+                        masks_pred = net(images)
+                    
+                    print(masks_pred.size())
+                    plt.hist(masks_pred[0,0].cpu().detach().numpy().flatten())
+                    plt.hist(masks_pred[0,1].cpu().detach().numpy().flatten())
+                    plt.title("histogrammes de mask_pred[0]")
+                    plt.show()
+                    
                     if net.n_classes == 1:
                         loss = criterion(masks_pred.squeeze(1), true_masks.float())
                         loss += dice_loss(F.sigmoid(masks_pred.squeeze(1)), true_masks.float(), multiclass=False)
@@ -199,7 +213,6 @@ def train_net(net,
                     histograms['Gradients/' + tag] = wandb.Histogram(value.grad.data.cpu())
 
             val_score = evaluate(net, val_loader, device, useatt=useatt, addpos=addpositions)
-            epoch_dice += val_score
             # scheduler.step(val_score)
             net.train()
 

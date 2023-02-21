@@ -25,6 +25,8 @@ torch.manual_seed(1188)
 import random
 random.seed(1188)
 
+# DATA DIRECTORIES 
+## FOR TRAINING 
 # dir_img = Path('./data/imgs/')
 dir_img = Path('D:\\Master Thesis\\data\\KU\\train')
 # dir_img = Path('D:\\Master Thesis\\data\\GTEA\\GTEA\\train')
@@ -36,6 +38,11 @@ dir_mask = Path('D:\\Master Thesis\\data\\KU\\trainannot')
 # dir_mask = Path('D:\\Master Thesis\\data\\EgoHOS\\train\\label')
 
 dir_attmap = Path('./data/attmaps/')
+
+## FOR TESTING 
+dir_img_test = Path('D:\\Master Thesis\\data\\KU\\test')
+dir_mask_test = Path('D:\\Master Thesis\\data\\KU\\testannot')
+dir_attmap_test = Path('D:\\Master Thesis\\data\\KU\\testattmap')
 
 dir_checkpoint = Path('./checkpoints')
 
@@ -79,7 +86,7 @@ def train_net(net,
     # 4. Create data loaders
     loader_args = dict(num_workers=4, pin_memory=True)
     train_loader = DataLoader(train_set, shuffle=True, batch_size=batch_size, **loader_args)
-    val_loader = DataLoader(val_set, shuffle=False, drop_last=True, batch_size=min(batch_size, n_val), **loader_args)
+    val_loader = DataLoader(val_set, shuffle=False, batch_size=batch_size, **loader_args)
 
     # (Initialize logging)
     # project_name = 'U-Net'
@@ -284,6 +291,28 @@ def train_net(net,
     return best_ckpt 
 
 
+def test_net(net,
+              device,
+              img_scale: float = 0.5,
+              useatt: bool = False, 
+              addpositions: bool = False):
+
+    # 1. Create dataset
+    if useatt: 
+        test_set = AttentionDataset(images_dir=dir_img_test, masks_dir=dir_mask_test, scale=img_scale, attmaps_dir=dir_attmap_test, transform = dict())
+    else: 
+        test_set = BasicDataset(images_dir=dir_img_test, masks_dir=dir_mask_test, scale=img_scale, transform = dict())
+
+    # 2. Create data loader 
+    loader_args = dict(num_workers=4, pin_memory=True)
+    test_loader = DataLoader(test_set, shuffle=False, batch_size=1, **loader_args)
+    
+    # 3. Calculate test dataset DICE score 
+    test_score = evaluate(net, test_loader, device, useatt=useatt, addpos=addpositions)
+
+    return test_score 
+
+
 def get_args():
     parser = argparse.ArgumentParser(description='Train the UNet on images and target masks')
     parser.add_argument('--epochs', '-e', metavar='E', type=int, default=5, help='Number of epochs')
@@ -302,6 +331,7 @@ def get_args():
     parser.add_argument('--saveall', action='store_true', default=False, help='Save checkpoint at each epoch')
     parser.add_argument('--savebest', action='store_false', default=True, help='Save checkpoint of best epoch')
     parser.add_argument('--wpos', action='store_true', default=False, help='Add normalized position to input')
+    parser.add_argument('--test', action='store_true', default=False, help='Do the test after training')
 
     return parser.parse_args()
 
@@ -356,3 +386,14 @@ if __name__ == '__main__':
         torch.save(net.state_dict(), 'INTERRUPTED.pth')
         logging.info('Saved interrupt')
         raise
+
+    # TESTING SECTION 
+    if args.test: 
+        logging.info(f'Start testing... ')
+        test_DICE = test_net(
+            net=net,
+            device=device,
+            img_scale=args.scale,
+            useatt=args.attention, 
+            addpositions=args.wpos)
+        logging.info(f'DICE score of testing dataset is: {test_DICE}')

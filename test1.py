@@ -15,11 +15,8 @@ from unet.unetutils.utils import plot_img_and_mask_and_gt
 
 import matplotlib.pyplot as plt 
 
-from torch import Tensor 
 from unet.unetutils.dice_score import multiclass_dice_coeff, dice_coeff
-
-import os
-os.environ['KMP_DUPLICATE_LIB_OK']='True'
+print("aiyaaaah")
 
 # CHOOSE INPUT DIRECTORIES 
 imgdir = Path('D:\\Master Thesis\\data\\KU\\train')
@@ -37,7 +34,7 @@ outdir = Path("./results/unet")
 dir_checkpoint = Path('./checkpoints')
 # ckp = "U-Net-3/tKU_bs16_e50_lr1e-2.pth" ## GIVING THE CORRECT OUTPUT 
 # ckp = "U-Net-3/tKU_bs16_e50_lr1e-2_1.pth" # GIVING THE WRONG OUTPUT 
-ckp = "U-Net-3/checkpoint_epoch_best.pth"
+ckp = "U-Net-3/divine_thunder_48.pth"
 
 def normalizeToRGB(array): 
     mini, maxi = np.min(array), np.max(array)
@@ -61,7 +58,9 @@ def predict_img(net,
                 useatt: bool = False, 
                 full_attmap = None, 
                 addpositions: bool = False):
-    img = torch.from_numpy(AttentionDataset.preprocess(full_img, scale_factor, is_mask=False))
+    img = AttentionDataset.preprocess(full_img, scale_factor, is_mask=False)
+    img = torch.as_tensor(img.copy()).float().contiguous()
+    print("DEBUG: img size", img.size())
     if addpositions: 
         # Add normalized positions to input 
         _, w, h = img.shape
@@ -72,8 +71,8 @@ def predict_img(net,
         grid_y = grid_y.repeat(1, 1, 1)
         img = torch.cat((img, grid_x, grid_y), dim=0)
     img = img.unsqueeze(0)
+    print("DEBUG: img size", img.size())
     img = img.to(device=device, dtype=torch.float32)
-
     assert img.shape[1] == net.n_channels, \
         f'Network has been defined with {net.n_channels} input channels, ' \
         f'but loaded images have {img.shape[1]} channels. Please check that ' \
@@ -84,6 +83,7 @@ def predict_img(net,
         attmap = attmap.unsqueeze(0)
         attmap = attmap.to(device=device, dtype=torch.float32)
 
+    net.eval()
     with torch.no_grad():
         if useatt: 
             output = net(img, attmap)
@@ -135,6 +135,7 @@ def predict_img(net,
         print(full_mask.size())
         plt.show()
         print(torch.max(probs), torch.min(probs))
+    net.train()
 
     if net.n_classes == 1:
         return (full_mask > out_threshold).float().numpy()
@@ -203,7 +204,7 @@ def diceuniqueclass(pred, gt, classvalue = 1):
 #         meandice = diceuniqueclass(pred, gt, 1)
 #     return meandice 
 
-def dice(input: Tensor, target: Tensor, multiclass: bool = True):
+def dice(input: torch.Tensor, target: torch.Tensor, multiclass: bool = True):
     # Dice loss (objective to minimize) between 0 and 1
     assert input.size() == target.size()
     fn = multiclass_dice_coeff if multiclass else dice_coeff
@@ -244,7 +245,6 @@ if __name__ == '__main__':
         f"Number of input channels ({net.n_channels}) and loaded model ({nchanToLoad}) are not the same. Choose a different model to load."
     net.load_state_dict(modelToLoad, strict=True)
     net.to(device=device)
-    net.eval()
 
     logging.info('Model loaded!')
 

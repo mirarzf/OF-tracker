@@ -9,10 +9,10 @@ from PIL import Image
 from torch.utils.data import Dataset
 
 # REPRODUCIBILITY 
-torch.manual_seed(1188)
+torch.manual_seed(0)
 import random
-random.seed(1188)
-
+random.seed(0)
+np.random.seed(0)
 
 class AttentionDataset(Dataset): 
     def __init__(self, images_dir: str, masks_dir: str, scale: float = 1.0, mask_suffix: str = '', transform = dict(), attmaps_dir: str = '', withatt: bool = True):

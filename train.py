@@ -21,28 +21,29 @@ from unet.unet_model import UNet, UNetAtt
 import matplotlib.pyplot as plt 
 
 # REPRODUCIBILITY 
-torch.manual_seed(1188)
+torch.manual_seed(0)
 import random
-random.seed(1188)
+random.seed(0)
+np.random.seed(0)
 
 # DATA DIRECTORIES 
 ## FOR TRAINING 
-# dir_img = Path('./data/imgs/')
-dir_img = Path('D:\\Master Thesis\\data\\KU\\train')
+dir_img = Path('./data/imgs/')
+# dir_img = Path('D:\\Master Thesis\\data\\KU\\train')
 # dir_img = Path('D:\\Master Thesis\\data\\GTEA\\GTEA\\train')
 # dir_img = Path('D:\\Master Thesis\\data\\EgoHOS\\train\\image')
 
-# dir_mask = Path('./data/masks/')
-dir_mask = Path('D:\\Master Thesis\\data\\KU\\trainannot')
+dir_mask = Path('./data/masks/')
+# dir_mask = Path('D:\\Master Thesis\\data\\KU\\trainannot')
 # dir_mask = Path('D:\\Master Thesis\\data\\GTEA\\GTEA\\trainannot')
 # dir_mask = Path('D:\\Master Thesis\\data\\EgoHOS\\train\\label')
 
 dir_attmap = Path('./data/attmaps/')
 
 ## FOR TESTING 
-dir_img_test = Path('D:\\Master Thesis\\data\\KU\\test')
-dir_mask_test = Path('D:\\Master Thesis\\data\\KU\\testannot')
-dir_attmap_test = Path('D:\\Master Thesis\\data\\KU\\testattmap')
+dir_img_test = Path('./data/test/imgs/')
+dir_mask_test = Path('./data/test/masks')
+dir_attmap_test = Path('./data/test/attmaps')
 
 dir_checkpoint = Path('./checkpoints')
 
@@ -172,7 +173,6 @@ def train_net(net,
                     else: 
                         masks_pred = net(images)
                     
-                    print("DEBUG PRINT: LA TAILLE DE MASKS_PRED", masks_pred.shape) ############################################################## DEBUG 
                     with torch.no_grad(): 
                         if epoch == epochs: 
                             class0 = masks_pred[0,0].detach().cpu().numpy()
@@ -270,13 +270,13 @@ def train_net(net,
                 best_loss = epoch_loss 
                 best_ckpt = 1 
                 if not save_checkpoint: 
-                    torch.save(net.state_dict(), dirckp / 'checkpoint_epoch_best.pth')
+                    torch.save(net.state_dict(), str(dirckp / 'checkpoint_epoch_best.pth'))
                     logging.info(f'Checkpoint {epoch} saved!')
             else: 
                 if epoch_loss < best_loss: 
                     best_loss = epoch_loss
                     best_ckpt = epoch
-                    torch.save(net.state_dict(), dir_checkpoint / 'checkpoint_epoch_best.pth')
+                    torch.save(net.state_dict(), str(dirckp / 'checkpoint_epoch_best.pth'))
                     logging.info(f'Best checkpoint at {epoch} saved!')
             
             logging.info('Epoch loss: {}'.format(best_loss))
@@ -295,7 +295,8 @@ def test_net(net,
               device,
               img_scale: float = 0.5,
               useatt: bool = False, 
-              addpositions: bool = False):
+              addpositions: bool = False, 
+              savetest: bool = True):
 
     # 1. Create dataset
     if useatt: 
@@ -310,43 +311,42 @@ def test_net(net,
     # 3. Calculate test dataset DICE score 
     test_score = evaluate(net, test_loader, device, useatt=useatt, addpos=addpositions)
     
-    ##### PLOTTING RESULTS FOR DEBUG 
-    for batch in test_loader: 
-        images = batch['image']
-        if addpositions: 
-            # Add normalized positions to input 
-            _, batchsize, w, h = images.shape
-            x = torch.tensor(np.arange(h)/(h-1))
-            y = torch.tensor(np.arange(w)/(w-1))
-            grid_x, grid_y = torch.meshgrid(x, y, indexing='ij')
-            grid_x = grid_x.repeat(len(images), 1, 1, 1)
-            grid_y = grid_y.repeat(len(images), 1, 1, 1)
-            images = torch.cat((images, grid_x, grid_y), dim=1)
-        true_masks = batch['mask']
-        index = batch['index']
-        if useatt: 
-            attention_maps = batch['attmap']
-
-        images = images.to(device=device, dtype=torch.float32)
-        true_masks = true_masks.to(device=device, dtype=torch.long)
-        index = index.to(device=device, dtype=torch.int)
-        if useatt: 
-            attention_maps = attention_maps.to(device=device, dtype=torch.float32)
-        
+    # 4. Save segmentations masks output 
+    if savetest: 
         net.eval()
-        if useatt: 
-            masks_pred = net(images, attention_maps)
-        else: 
-            masks_pred = net(images)
-        
-        print("DEBUG PRINT: LA TAILLE DE MASKS_PRED", masks_pred.shape) ############################################################## DEBUG 
-        with torch.no_grad(): 
-            class0 = masks_pred[0,0].detach().cpu().numpy()
-            class1 = masks_pred[0,1].detach().cpu().numpy()
-            plt.hist(class0.flatten())
-            plt.hist(class1.flatten())
-            plt.title("output")
-            plt.show()
+        for batch in test_loader: 
+            images = batch['image']
+            if addpositions: 
+                # Add normalized positions to input 
+                _, batchsize, w, h = images.shape
+                x = torch.tensor(np.arange(h)/(h-1))
+                y = torch.tensor(np.arange(w)/(w-1))
+                grid_x, grid_y = torch.meshgrid(x, y, indexing='ij')
+                grid_x = grid_x.repeat(len(images), 1, 1, 1)
+                grid_y = grid_y.repeat(len(images), 1, 1, 1)
+                images = torch.cat((images, grid_x, grid_y), dim=1)
+            true_masks = batch['mask']
+            index = batch['index']
+            if useatt: 
+                attention_maps = batch['attmap']
+
+            images = images.to(device=device, dtype=torch.float32)
+            true_masks = true_masks.to(device=device, dtype=torch.long)
+            index = index.to(device=device, dtype=torch.int)
+            if useatt: 
+                attention_maps = attention_maps.to(device=device, dtype=torch.float32)
+            
+            if useatt: 
+                masks_pred = net(images, attention_maps)
+            else: 
+                masks_pred = net(images)
+            
+            
+            # convert to one-hot format
+            if net.n_classes == 1:
+                masks_pred = (F.sigmoid(masks_pred) > 0.5).float()
+            else:
+                masks_pred = (masks_pred.argmax(dim=1)).float()
         net.train()
 
     return test_score 
@@ -368,7 +368,7 @@ def get_args():
     parser.add_argument('--attention', action='store_true', default=False, help='Use UNet with attention model')
     parser.add_argument('--framesdecay', action='store_true', default=False, help='Modify loss function to add the frames lack of importance')
     parser.add_argument('--saveall', action='store_true', default=False, help='Save checkpoint at each epoch')
-    parser.add_argument('--savebest', action='store_false', default=True, help='Save checkpoint of best epoch')
+    parser.add_argument('--nosavebest', action='store_true', default=False, help="Don't save checkpoint of best epoch")
     parser.add_argument('--wpos', action='store_true', default=False, help='Add normalized position to input')
     parser.add_argument('--test', action='store_true', default=False, help='Do the test after training')
 
@@ -405,6 +405,7 @@ if __name__ == '__main__':
         logging.info(f'Model loaded from {args.load}')
 
     net.to(device=device)
+    # TRAINING SECTION 
     try:
         best_ckpt = train_net(
             net=net,
@@ -415,7 +416,7 @@ if __name__ == '__main__':
             img_scale=args.scale,
             val_percent=args.val / 100,
             save_checkpoint=args.saveall,
-            save_best_checkpoint=args.savebest,
+            save_best_checkpoint=(not args.nosavebest),
             amp=args.amp, 
             useatt=args.attention, 
             lossframesdecay=args.framesdecay, 

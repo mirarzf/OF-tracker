@@ -45,6 +45,7 @@ dir_img_test = Path('./data/test/imgs/')
 dir_mask_test = Path('./data/test/masks')
 dir_attmap_test = Path('./data/test/attmaps')
 
+## PARENT FOLDER OF CHECKPOINTS 
 dir_checkpoint = Path('./checkpoints')
 
 def train_net(net,

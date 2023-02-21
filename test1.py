@@ -16,7 +16,6 @@ from unet.unetutils.utils import plot_img_and_mask_and_gt
 import matplotlib.pyplot as plt 
 
 from unet.unetutils.dice_score import multiclass_dice_coeff, dice_coeff
-print("aiyaaaah")
 
 # CHOOSE INPUT DIRECTORIES 
 imgdir = Path('D:\\Master Thesis\\data\\KU\\train')

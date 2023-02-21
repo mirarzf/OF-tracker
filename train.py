@@ -342,7 +342,6 @@ def test_net(net,
             else: 
                 masks_pred = net(images)
             
-            
             # convert to one-hot format
             if net.n_classes == 1:
                 masks_pred = (F.sigmoid(masks_pred) > 0.5).float()

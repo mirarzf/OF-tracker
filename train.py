@@ -309,6 +309,45 @@ def test_net(net,
     
     # 3. Calculate test dataset DICE score 
     test_score = evaluate(net, test_loader, device, useatt=useatt, addpos=addpositions)
+    
+    ##### PLOTTING RESULTS FOR DEBUG 
+    for batch in test_loader: 
+        images = batch['image']
+        if addpositions: 
+            # Add normalized positions to input 
+            _, batchsize, w, h = images.shape
+            x = torch.tensor(np.arange(h)/(h-1))
+            y = torch.tensor(np.arange(w)/(w-1))
+            grid_x, grid_y = torch.meshgrid(x, y, indexing='ij')
+            grid_x = grid_x.repeat(len(images), 1, 1, 1)
+            grid_y = grid_y.repeat(len(images), 1, 1, 1)
+            images = torch.cat((images, grid_x, grid_y), dim=1)
+        true_masks = batch['mask']
+        index = batch['index']
+        if useatt: 
+            attention_maps = batch['attmap']
+
+        images = images.to(device=device, dtype=torch.float32)
+        true_masks = true_masks.to(device=device, dtype=torch.long)
+        index = index.to(device=device, dtype=torch.int)
+        if useatt: 
+            attention_maps = attention_maps.to(device=device, dtype=torch.float32)
+        
+        net.eval()
+        if useatt: 
+            masks_pred = net(images, attention_maps)
+        else: 
+            masks_pred = net(images)
+        
+        print("DEBUG PRINT: LA TAILLE DE MASKS_PRED", masks_pred.shape) ############################################################## DEBUG 
+        with torch.no_grad(): 
+            class0 = masks_pred[0,0].detach().cpu().numpy()
+            class1 = masks_pred[0,1].detach().cpu().numpy()
+            plt.hist(class0.flatten())
+            plt.hist(class1.flatten())
+            plt.title("output")
+            plt.show()
+        net.train()
 
     return test_score 
 

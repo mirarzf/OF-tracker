@@ -15,9 +15,8 @@ from tqdm import tqdm
 from unet.unetutils.data_loading import BasicDataset, AttentionDataset
 from unet.unetutils.dice_score import dice_loss
 from evaluate import evaluate
+from test import test_net
 from unet.unet_model import UNet, UNetAtt
-
-from test1 import test_net
 
 import matplotlib.pyplot as plt 
 

@@ -17,6 +17,8 @@ from unet.unetutils.dice_score import dice_loss
 from evaluate import evaluate
 from unet.unet_model import UNet, UNetAtt
 
+from test1 import test_net
+
 import matplotlib.pyplot as plt 
 
 # REPRODUCIBILITY 
@@ -290,64 +292,64 @@ def train_net(net,
     
     return best_ckpt 
 
-def test_net(net,
-              device,
-              img_scale: float = 0.5,
-              useatt: bool = False, 
-              addpositions: bool = False, 
-              savetest: bool = True):
+# def test_net(net,
+#               device,
+#               img_scale: float = 0.5,
+#               useatt: bool = False, 
+#               addpositions: bool = False, 
+#               savetest: bool = True):
 
-    # 1. Create dataset
-    if useatt: 
-        test_set = AttentionDataset(images_dir=dir_img_test, masks_dir=dir_mask_test, scale=img_scale, attmaps_dir=dir_attmap_test, transform = dict())
-    else: 
-        test_set = BasicDataset(images_dir=dir_img_test, masks_dir=dir_mask_test, scale=img_scale, transform = dict())
+#     # 1. Create dataset
+#     if useatt: 
+#         test_set = AttentionDataset(images_dir=dir_img_test, masks_dir=dir_mask_test, scale=img_scale, attmaps_dir=dir_attmap_test, transform = dict())
+#     else: 
+#         test_set = BasicDataset(images_dir=dir_img_test, masks_dir=dir_mask_test, scale=img_scale, transform = dict())
 
-    # 2. Create data loader 
-    loader_args = dict(num_workers=4, pin_memory=True)
-    test_loader = DataLoader(test_set, shuffle=False, batch_size=1, **loader_args)
+#     # 2. Create data loader 
+#     loader_args = dict(num_workers=4, pin_memory=True)
+#     test_loader = DataLoader(test_set, shuffle=False, batch_size=1, **loader_args)
     
-    # 3. Calculate test dataset DICE score 
-    test_score = evaluate(net, test_loader, device, useatt=useatt, addpos=addpositions)
+#     # 3. Calculate test dataset DICE score 
+#     test_score = evaluate(net, test_loader, device, useatt=useatt, addpos=addpositions)
     
-    # 4. Save segmentations masks output 
-    if savetest: 
-        net.eval()
-        for batch in test_loader: 
-            images = batch['image']
-            if addpositions: 
-                # Add normalized positions to input 
-                _, batchsize, w, h = images.shape
-                x = torch.tensor(np.arange(h)/(h-1))
-                y = torch.tensor(np.arange(w)/(w-1))
-                grid_x, grid_y = torch.meshgrid(x, y, indexing='ij')
-                grid_x = grid_x.repeat(len(images), 1, 1, 1)
-                grid_y = grid_y.repeat(len(images), 1, 1, 1)
-                images = torch.cat((images, grid_x, grid_y), dim=1)
-            true_masks = batch['mask']
-            index = batch['index']
-            if useatt: 
-                attention_maps = batch['attmap']
+#     # 4. Save segmentations masks output 
+#     if savetest: 
+#         net.eval()
+#         for batch in test_loader: 
+#             images = batch['image']
+#             if addpositions: 
+#                 # Add normalized positions to input 
+#                 _, batchsize, w, h = images.shape
+#                 x = torch.tensor(np.arange(h)/(h-1))
+#                 y = torch.tensor(np.arange(w)/(w-1))
+#                 grid_x, grid_y = torch.meshgrid(x, y, indexing='ij')
+#                 grid_x = grid_x.repeat(len(images), 1, 1, 1)
+#                 grid_y = grid_y.repeat(len(images), 1, 1, 1)
+#                 images = torch.cat((images, grid_x, grid_y), dim=1)
+#             true_masks = batch['mask']
+#             index = batch['index']
+#             if useatt: 
+#                 attention_maps = batch['attmap']
 
-            images = images.to(device=device, dtype=torch.float32)
-            true_masks = true_masks.to(device=device, dtype=torch.long)
-            index = index.to(device=device, dtype=torch.int)
-            if useatt: 
-                attention_maps = attention_maps.to(device=device, dtype=torch.float32)
+#             images = images.to(device=device, dtype=torch.float32)
+#             true_masks = true_masks.to(device=device, dtype=torch.long)
+#             index = index.to(device=device, dtype=torch.int)
+#             if useatt: 
+#                 attention_maps = attention_maps.to(device=device, dtype=torch.float32)
             
-            if useatt: 
-                masks_pred = net(images, attention_maps)
-            else: 
-                masks_pred = net(images)
+#             if useatt: 
+#                 masks_pred = net(images, attention_maps)
+#             else: 
+#                 masks_pred = net(images)
             
-            # convert to one-hot format
-            if net.n_classes == 1:
-                masks_pred = (F.sigmoid(masks_pred) > 0.5).float()
-            else:
-                masks_pred = (masks_pred.argmax(dim=1)).float()
-        net.train()
+#             # convert to one-hot format
+#             if net.n_classes == 1:
+#                 masks_pred = (F.sigmoid(masks_pred) > 0.5).float()
+#             else:
+#                 masks_pred = (masks_pred.argmax(dim=1)).float()
+#         net.train()
 
-    return test_score 
+#     return test_score 
 
 
 def get_args():
@@ -369,7 +371,8 @@ def get_args():
     parser.add_argument('--nosavebest', action='store_true', default=False, help="Don't save checkpoint of best epoch")
     parser.add_argument('--wpos', action='store_true', default=False, help='Add normalized position to input')
     parser.add_argument('--test', action='store_true', default=False, help='Do the test after training')
-
+    parser.add_argument('--viz', '-v', action='store_true', default=False, 
+                        help='Visualize the images as they are processed')
     return parser.parse_args()
 
 
@@ -429,9 +432,16 @@ if __name__ == '__main__':
     if args.test: 
         logging.info(f'Start testing... ')
         test_DICE = test_net(
-            net=net,
-            device=device,
-            img_scale=args.scale,
-            useatt=args.attention, 
-            addpositions=args.wpos)
+        net, 
+        device=device,
+        images_dir=dir_img_test, 
+        masks_dir=dir_mask_test, 
+        attmaps_dir=dir_attmap_test, 
+        img_scale=args.scale,
+        mask_threshold=0.5, 
+        useatt=args.attention, 
+        addposition=args.wpos, 
+        savepred=False, 
+        visualize=args.viz)
         logging.info(f'DICE score of testing dataset is: {test_DICE}')
+        

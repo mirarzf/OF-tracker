@@ -19,20 +19,20 @@ os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
 # CHOOSE INPUT DIRECTORIES 
 ## RGB input 
-imgdir = Path('D:\\Master Thesis\\data\\KU\\train')
-imgdir = Path('D:\\Master Thesis\\data\\KU\\test')
-# imgdir = Path("./data/imgs")
+# imgdir = Path('D:\\Master Thesis\\data\\KU\\train')
+# imgdir = Path('D:\\Master Thesis\\data\\KU\\test')
+imgdir = Path("./data/test/imgs")
 imgfilenames = [f for f in imgdir.glob('*.png') if f.is_file()] 
 
 ## Ground truth masks 
-gtdir = Path('D:\\Master Thesis\\data\\KU\\trainannot')
-gtdir = Path('D:\\Master Thesis\\data\\KU\\testannot')
-# gtdir = Path("./data/masks")
+# gtdir = Path('D:\\Master Thesis\\data\\KU\\trainannot')
+# gtdir = Path('D:\\Master Thesis\\data\\KU\\testannot')
+gtdir = Path("./data/test/masks")
 
 ## Attention maps input 
 attmapdir = None # Path("./")
 # attmapdir = Path('D:\\Master Thesis\\data\\KU\\testannot')
-# attmapdir = Path("./data/attmaps")
+# attmapdir = Path("./data/test/attmaps")
 
 ## Folder where to save the predicted segmentation masks 
 outdir = Path("./results/unet")
@@ -66,11 +66,19 @@ def test_net(net,
         test_set = AttentionDataset(images_dir=images_dir, masks_dir=masks_dir, scale=img_scale, attmaps_dir=attmaps_dir, transform = dict())
     else: 
         test_set = BasicDataset(images_dir=images_dir, masks_dir=masks_dir, scale=img_scale, transform = dict())
-
+    
     # 2. Create data loader 
     loader_args = dict(num_workers=4, pin_memory=True)
     test_loader = DataLoader(test_set, shuffle=False, batch_size=1, **loader_args)
     
+    logging.info(f'''Starting testing:
+        Attention model: {useatt}
+        Positions input: {addpositions}
+        Testing size:    {len(test_set)}
+        Device:          {device.type}
+        Images scaling:  {img_scale}
+    ''')
+
     # 3. Calculate DICE score and save predicted masks if toggled on 
     net.eval()
 
@@ -192,7 +200,7 @@ if __name__ == '__main__':
     savepred = True if outdir != None else False 
     dice_score = test_net(
         net, 
-        device,
+        device=device,
         images_dir=imgdir, 
         masks_dir=gtdir, 
         attmaps_dir=attmapdir, 

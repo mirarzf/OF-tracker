@@ -1,6 +1,5 @@
 import argparse
 import logging
-import sys
 from pathlib import Path
 
 import numpy as np 
@@ -290,7 +289,6 @@ def train_net(net,
         })
     
     return best_ckpt 
-
 
 def test_net(net,
               device,

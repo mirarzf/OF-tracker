@@ -77,6 +77,9 @@ class AttentionDataset(Dataset):
             return Image.fromarray(torch.load(filename).numpy())
         else:
             return Image.open(filename)
+    
+    def getImageID(self, idx): 
+        return self.ids[idx]
 
     def __getitem__(self, idx):
         name = self.ids[idx]

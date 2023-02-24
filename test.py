@@ -10,6 +10,7 @@ from PIL import Image
 from torchvision import transforms
 
 from unet.unetutils.data_loading import AttentionDataset
+from unet.unetutils.dice_score import multiclass_dice_coeff, dice_coeff
 from unet.unet_model import UNet, UNetAtt
 from unet.unetutils.utils import plot_img_and_mask_and_gt
 
@@ -19,24 +20,36 @@ import os
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
 # CHOOSE INPUT DIRECTORIES 
-# imgdir = Path("../data/GTEA/frames")
-# imgdir = Path('D:\\Master Thesis\\data\\KU\\train')
+imgdir = Path('D:\\Master Thesis\\data\\KU\\train')
 imgdir = Path('D:\\Master Thesis\\data\\KU\\test')
-imgfilenames = [f for f in imgdir.glob('*.png') if f.is_file()] 
 # imgdir = Path("./data/imgs")
-# gtdir = Path('D:\\Master Thesis\\data\\KU\\trainannot')
+imgfilenames = [f for f in imgdir.glob('*.png') if f.is_file()] 
+gtdir = Path('D:\\Master Thesis\\data\\KU\\trainannot')
 gtdir = Path('D:\\Master Thesis\\data\\KU\\testannot')
+# gtdir = Path("./data/masks")
 attmapdir = None # Path("./")
 # attmapdir = Path('D:\\Master Thesis\\data\\KU\\testannot')
 # attmapdir = Path("./data/attmaps")
 outdir = Path("./results/unet")
 
 dir_checkpoint = Path('./checkpoints')
-ckp = "U-Net-5-w-positions/checkpoint_epoch_best.pth" 
-ckp = "U-Net-3/checkpoint_epoch_best.pth" 
-# ckp = "U-Net-5-w-positions/tKU_bs16_e50_lr5e-1_1.pth" 
-# ckp = "U-Net-3/tKU_bs16_e50_lr1e-1_1.pth" 
+# ckp = "U-Net-3/tKU_bs16_e50_lr1e-2.pth" ## GIVING THE CORRECT OUTPUT 
+# ckp = "U-Net-3/tKU_bs16_e50_lr1e-2_1.pth" # GIVING THE WRONG OUTPUT 
+ckp = "U-Net-3/divine_thunder_48.pth"
 
+def normalizeToRGB(array): 
+    mini, maxi = np.min(array), np.max(array)
+    array = (array-mini)/(maxi-mini)*255 
+    array = array.astype(int)
+    return array
+
+def normalizeToRGBtensor(tens): 
+    for i in range(tens.shape[1]): 
+        array = tens[:,i]
+        mini, maxi = torch.min(array), torch.max(array)
+        array = (array-mini)/(maxi-mini)*255 
+        tens[:,i] = array
+    return tens
 
 def predict_img(net,
                 full_img,
@@ -46,7 +59,9 @@ def predict_img(net,
                 useatt: bool = False, 
                 full_attmap = None, 
                 addpositions: bool = False):
-    img = torch.from_numpy(AttentionDataset.preprocess(full_img, scale_factor, is_mask=False))
+    img = AttentionDataset.preprocess(full_img, scale_factor, is_mask=False)
+    img = torch.as_tensor(img.copy()).float().contiguous()
+    print("DEBUG: img size", img.size())
     if addpositions: 
         # Add normalized positions to input 
         _, w, h = img.shape
@@ -57,51 +72,76 @@ def predict_img(net,
         grid_y = grid_y.repeat(1, 1, 1)
         img = torch.cat((img, grid_x, grid_y), dim=0)
     img = img.unsqueeze(0)
+    print("DEBUG: img size", img.size())
     img = img.to(device=device, dtype=torch.float32)
+    assert img.shape[1] == net.n_channels, \
+        f'Network has been defined with {net.n_channels} input channels, ' \
+        f'but loaded images have {img.shape[1]} channels. Please check that ' \
+        'the images are loaded correctly.'
 
     if useatt: 
         attmap = torch.from_numpy(AttentionDataset.preprocess(full_attmap, scale_factor, is_mask=True))
         attmap = attmap.unsqueeze(0)
         attmap = attmap.to(device=device, dtype=torch.float32)
 
+    net.eval()
     with torch.no_grad():
         if useatt: 
             output = net(img, attmap)
         else: 
             output = net(img)
+        # PRINT HISTOGRAMS OF THE VALUES -- DEBUG HISTOGRAMS ########################################################## 
+        class0 = output[0,0].cpu().numpy()
+        class1 = output[0,1].cpu().numpy()
+        plt.hist(class0.flatten())
+        plt.hist(class1.flatten())
+        plt.title("output")
+        plt.show()
+        plt.imshow(normalizeToRGB(class0))
+        plt.colorbar()
+        plt.title("output class 0")
+        plt.show()
+        plt.imshow(normalizeToRGB(class1))
+        plt.colorbar()
+        plt.title("output class 1")
+        plt.show()
+        output = normalizeToRGBtensor(output)
 
         if net.n_classes > 1:
             # print(output)
-            probs = F.softmax(output, dim=1)[0]
+            probs = F.softmax(output, dim=1).float()
+            # probs = output
+            print("probs size", probs.size())
             # print(probs[:,150:155,150:155])
         else:
-            probs = torch.sigmoid(output)[0]
+            probs = torch.sigmoid(output)
             # print(probs[:,150:155,150:155])
-
-        tf = transforms.Compose([
-            transforms.ToPILImage(),
-            transforms.Resize((full_img.size[1], full_img.size[0])),
-            transforms.ToTensor()
-        ])
-
-        print(torch.max(probs), torch.min(probs))
-        full_mask = tf(probs.cpu()).squeeze()
-        # PRINT HISTOGRAMS OF THE VALUES -- DEBUG HISTOGRAMS ########################################################## 
-        plt.hist(full_mask[0].numpy().flatten(), bins=256)
-        plt.hist(full_mask[1].numpy().flatten(), bins=256)
+        plt.hist(probs[0,0].cpu().numpy().flatten())
+        plt.hist(probs[0,1].cpu().numpy().flatten())
+        plt.title("probs")
         plt.show()
-        # sumarray = full_mask[0].numpy() + full_mask[1].numpy()
-        # print(np.min(sumarray), np.max(sumarray))
-        # plt.imshow(sumarray, cmap='hot')
-        # plt.colorbar()
-        # plt.show()
-        # print(sumarray.shape)
-        # print(torch.max(full_mask), torch.min(full_mask))
+        print(torch.max(probs), torch.min(probs))
+
+        # tf = transforms.Compose([
+        #     transforms.ToPILImage(),
+        #     transforms.Resize((full_img.size[1], full_img.size[0])),
+        #     transforms.ToTensor()
+        # ])
+
+        # full_mask = tf(probs.cpu()).squeeze()
+        full_mask = F.interpolate(probs, (full_img.size[1], full_img.size[0]), mode='nearest-exact').cpu().squeeze()
+        plt.hist(full_mask[0].numpy().flatten())
+        plt.hist(full_mask[1].numpy().flatten())
+        plt.title("full_mask")
+        print(full_mask.size())
+        plt.show()
+        print(torch.max(probs), torch.min(probs))
+    net.train()
 
     if net.n_classes == 1:
-        return (full_mask > out_threshold).numpy()
+        return (full_mask > out_threshold).float().numpy()
     else:
-        return F.one_hot(full_mask.argmax(dim=0), net.n_classes).permute(2, 0, 1).numpy()
+        return full_mask.argmax(dim=0).float().numpy()
 
 
 def get_args():
@@ -144,25 +184,32 @@ def mask_to_image(mask: np.ndarray):
         return Image.fromarray((np.argmax(mask, axis=0) * 255 / mask.shape[0]).astype(np.uint8))
 
 def diceuniqueclass(pred, gt, classvalue = 1): 
-    assert pred.shape[0] == gt.shape[0] and pred.shape[1] == gt.shape[1]
+    assert pred.shape[0] == gt.shape[0] and pred.shape[1] == gt.shape[1], \
+        f'Shape of prediction is {pred.shape} and shape of prediction is {gt.shape}'
     gtones = np.where(gt == classvalue, 1, 0)
     cardpred = np.sum(pred)
     cardgt = np.sum(gtones)
     inter = np.sum(pred*gtones)
     return 2 * inter / (cardpred + cardgt)
 
-def dice(pred, gt, multiclass = True): 
-    ''' 
-    Input is in shape [C, H, W] with C equals to number of classes 
-    '''
-    meandice = 0 
-    if multiclass: 
-        for i in range(pred.shape[0]): 
-            meandice += diceuniqueclass(pred[i], gt, i)
-        meandice /= pred.shape[0]
-    else: 
-        meandice = diceuniqueclass(pred, gt, 1)
-    return meandice 
+# def dice(pred, gt, multiclass = True): 
+#     ''' 
+#     Input is in shape [C, H, W] with C equals to number of classes 
+#     '''
+#     meandice = 0 
+#     if multiclass: 
+#         for i in range(1,pred.shape[0]): 
+#             meandice += diceuniqueclass(pred[i], gt, i)
+#         meandice /= pred.shape[0]
+#     else: 
+#         meandice = diceuniqueclass(pred, gt, 1)
+#     return meandice 
+
+def dice(input: torch.Tensor, target: torch.Tensor, multiclass: bool = True):
+    # Dice loss (objective to minimize) between 0 and 1
+    assert input.size() == target.size()
+    fn = multiclass_dice_coeff if multiclass else dice_coeff
+    return fn(input, target, reduce_batch_first=True)
 
 
 if __name__ == '__main__':
@@ -199,7 +246,6 @@ if __name__ == '__main__':
         f"Number of input channels ({net.n_channels}) and loaded model ({nchanToLoad}) are not the same. Choose a different model to load."
     net.load_state_dict(modelToLoad, strict=True)
     net.to(device=device)
-    net.eval()
 
     logging.info('Model loaded!')
 
@@ -221,17 +267,31 @@ if __name__ == '__main__':
                            useatt=useatt, 
                            full_attmap=attmap, 
                            addpositions=args.wpos)
+        plt.imshow(mask)
+        plt.colorbar()
+        plt.title("mask")
+        plt.show()
         
         gt = Image.open(in_files_gt[i])
         gt = np.asarray(gt)
         thres = 0
         print(gt.shape)
         gt = np.where(gt > thres, 1, 0)[:,:,0]
+        print(gt.shape)
+        print(gt[:5,:5])
 
-        dice_score += dice(
-            mask, 
-            gt, 
-            multiclass=(net.n_classes > 1))
+        # dice_score += dice(
+        #     F.one_hot(mask, net.n_classes).permute(2, 0, 1), 
+        #     gt, 
+        #     multiclass=(net.n_classes > 1))
+
+        if net.n_classes == 1: 
+            dice_score += dice(torch.from_numpy(mask).float(), torch.from_numpy(gt)[None, ...])
+        else: 
+            onehotmask = F.one_hot(torch.from_numpy(mask)[None, ...].long(), net.n_classes).permute(0, 3, 1, 2).float()
+            onehotgt = F.one_hot(torch.from_numpy(gt)[None, ...].long(), net.n_classes).permute(0, 3, 1, 2).float()
+            dice_score += dice(onehotmask[:, 1:, ...], onehotgt[:, 1:, ...])
+        
 
         if not args.no_save:
             out_filename = out_files[i]

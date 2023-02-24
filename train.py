@@ -371,7 +371,7 @@ def get_args():
     parser.add_argument('--nosavebest', action='store_true', default=False, help="Don't save checkpoint of best epoch")
     parser.add_argument('--wpos', action='store_true', default=False, help='Add normalized position to input')
     parser.add_argument('--test', action='store_true', default=False, help='Do the test after training')
-    parser.add_argument('--viz', '-v', action='store_true', default=False, 
+    parser.add_argument('--viz', action='store_true', default=False, 
                         help='Visualize the images as they are processed')
     return parser.parse_args()
 

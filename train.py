@@ -440,7 +440,7 @@ if __name__ == '__main__':
         img_scale=args.scale,
         mask_threshold=0.5, 
         useatt=args.attention, 
-        addposition=args.wpos, 
+        addpositions=args.wpos, 
         savepred=False, 
         visualize=args.viz)
         logging.info(f'DICE score of testing dataset is: {test_DICE}')

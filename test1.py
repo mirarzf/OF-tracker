@@ -207,7 +207,7 @@ if __name__ == '__main__':
         img_scale=args.scale,
         mask_threshold=args.mask_threshold, 
         useatt=useatt, 
-        addposition=args.wpos, 
+        addpositions=args.wpos, 
         savepred=savepred, 
         visualize=args.viz)
         

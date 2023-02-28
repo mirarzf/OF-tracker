@@ -41,7 +41,7 @@ outdir = Path("./results/unet")
 ## Checkpoint directories 
 dir_checkpoint = Path('./checkpoints')
 ### Model file path inside dir_checkpoint folder 
-ckp = "U-Net-3/divine_thunder_48.pth"
+ckp = "U-Net-3/checkpoint_epoch_best.pth"
 
 ##########################################################################################
 

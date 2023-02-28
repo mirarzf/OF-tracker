@@ -17,7 +17,7 @@ from unet.unetutils.dice_score import dice_loss
 from evaluate import evaluate
 from unet.unet_model import UNet, UNetAtt
 
-from test1 import test_net
+from test import test_net
 
 import matplotlib.pyplot as plt 
 
@@ -175,14 +175,15 @@ def train_net(net,
                     else: 
                         masks_pred = net(images)
                     
-                    with torch.no_grad(): 
-                        if epoch == epochs: 
-                            class0 = masks_pred[0,0].detach().cpu().numpy()
-                            class1 = masks_pred[0,1].detach().cpu().numpy()
-                            plt.hist(class0.flatten())
-                            plt.hist(class1.flatten())
-                            plt.title("output")
-                            plt.show()
+                    # # PRINT HISTOGRAMS OF THE VALUES -- DEBUG HISTOGRAMS ########################################################## 
+                    # with torch.no_grad(): 
+                        # if epoch == epochs: 
+                        #     class0 = masks_pred[0,0].detach().cpu().numpy()
+                        #     class1 = masks_pred[0,1].detach().cpu().numpy()
+                        #     plt.hist(class0.flatten())
+                        #     plt.hist(class1.flatten())
+                        #     plt.title("output")
+                        #     plt.show()
 
                     if net.n_classes == 1:
                         loss = criterion(masks_pred.squeeze(1), true_masks.float())

@@ -9,7 +9,8 @@ import torch.nn.functional as F
 from PIL import Image
 
 from torch.utils.data import DataLoader
-from unet.unetutils.data_loading import AttentionDataset, BasicDataset
+from torch.utils.data import DataLoader
+from unet.unetutils.data_loading import AttentionDataset, BasicDataset, BasicDataset
 from unet.unetutils.dice_score import multiclass_dice_coeff, dice_coeff
 from unet.unet_model import UNet, UNetAtt
 from unet.unetutils.utils import plot_img_and_mask_and_gt
@@ -48,7 +49,7 @@ def mask_to_image(mask: np.ndarray):
     if mask.ndim == 2:
         return Image.fromarray((mask * 255).astype(np.uint8))
     elif mask.ndim == 3:
-        return Image.fromarray((np.argmax(mask, axis=0) * 255 / mask.shape[0]).astype(np.uint8))
+        return Image.fromarray((np.argmax(mask, axis=0) * 255 / (mask.shape[0]-1)).astype(np.uint8))
 
 def test_net(net, 
               device,

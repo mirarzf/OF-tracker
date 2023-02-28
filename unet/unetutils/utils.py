@@ -1,6 +1,4 @@
 import matplotlib.pyplot as plt
-import matplotlib as mpl
-import numpy as np
 
 def plot_img_and_mask(img, mask):
     classes = mask.shape[0] if len(mask.shape) > 2 else 1

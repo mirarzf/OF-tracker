@@ -23,10 +23,18 @@ from test import test_net
 import matplotlib.pyplot as plt 
 
 # REPRODUCIBILITY 
-torch.manual_seed(0)
 import random
-random.seed(0)
-np.random.seed(0)
+def set_seed(seed: int = 42) -> None:
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    # When running on the CuDNN backend, two further options must be set
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    print(f"Random seed set as {seed}")
+set_seed(0)
+# END REPRODUCIBILLITY 
 
 # DATA DIRECTORIES 
 ## FOR TRAINING 
@@ -293,66 +301,6 @@ def train_net(net,
         })
     
     return best_ckpt 
-
-# def test_net(net,
-#               device,
-#               img_scale: float = 0.5,
-#               useatt: bool = False, 
-#               addpositions: bool = False, 
-#               savetest: bool = True):
-
-#     # 1. Create dataset
-#     if useatt: 
-#         test_set = AttentionDataset(images_dir=dir_img_test, masks_dir=dir_mask_test, scale=img_scale, attmaps_dir=dir_attmap_test, transform = dict())
-#     else: 
-#         test_set = BasicDataset(images_dir=dir_img_test, masks_dir=dir_mask_test, scale=img_scale, transform = dict())
-
-#     # 2. Create data loader 
-#     loader_args = dict(num_workers=4, pin_memory=True)
-#     test_loader = DataLoader(test_set, shuffle=False, batch_size=1, **loader_args)
-    
-#     # 3. Calculate test dataset DICE score 
-#     test_score = evaluate(net, test_loader, device, useatt=useatt, addpos=addpositions)
-    
-#     # 4. Save segmentations masks output 
-#     if savetest: 
-#         net.eval()
-#         for batch in test_loader: 
-#             images = batch['image']
-#             if addpositions: 
-#                 # Add normalized positions to input 
-#                 _, batchsize, w, h = images.shape
-#                 x = torch.tensor(np.arange(h)/(h-1))
-#                 y = torch.tensor(np.arange(w)/(w-1))
-#                 grid_x, grid_y = torch.meshgrid(x, y, indexing='ij')
-#                 grid_x = grid_x.repeat(len(images), 1, 1, 1)
-#                 grid_y = grid_y.repeat(len(images), 1, 1, 1)
-#                 images = torch.cat((images, grid_x, grid_y), dim=1)
-#             true_masks = batch['mask']
-#             index = batch['index']
-#             if useatt: 
-#                 attention_maps = batch['attmap']
-
-#             images = images.to(device=device, dtype=torch.float32)
-#             true_masks = true_masks.to(device=device, dtype=torch.long)
-#             index = index.to(device=device, dtype=torch.int)
-#             if useatt: 
-#                 attention_maps = attention_maps.to(device=device, dtype=torch.float32)
-            
-#             if useatt: 
-#                 masks_pred = net(images, attention_maps)
-#             else: 
-#                 masks_pred = net(images)
-            
-#             # convert to one-hot format
-#             if net.n_classes == 1:
-#                 masks_pred = (F.sigmoid(masks_pred) > 0.5).float()
-#             else:
-#                 masks_pred = (masks_pred.argmax(dim=1)).float()
-#         net.train()
-
-#     return test_score 
-
 
 def get_args():
     parser = argparse.ArgumentParser(description='Train the UNet on images and target masks')

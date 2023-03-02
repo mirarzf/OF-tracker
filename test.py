@@ -176,6 +176,7 @@ if __name__ == '__main__':
     n_channels = 3 
     if args.wpos: 
         n_channels += 2 
+        print("TEST TEST TEST ")
     if useatt: 
         net = UNetAtt(n_channels=n_channels, n_classes=args.classes, bilinear=args.bilinear)
     else: 

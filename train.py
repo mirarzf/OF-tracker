@@ -71,9 +71,6 @@ def train_net(net,
               lossframesdecay: bool = False, 
               addpositions: bool = False):
     
-    # 0. Setting seed for reproducibility 
-    set_seed(0)
-    
     # 1. Choose data augmentation transforms (using albumentations) 
     geotransform = A.Compose([ 
         A.HorizontalFlip(p=0.5)
@@ -324,6 +321,10 @@ def get_args():
 
 
 if __name__ == '__main__':
+    
+    # Setting seed for reproducibility 
+    set_seed(0)
+
     args = get_args()
 
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')

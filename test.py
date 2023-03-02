@@ -85,11 +85,6 @@ def test_net(net,
     # iterate over the test set
     for batch in tqdm(test_loader, total=num_val_batches, desc='Validation round', unit='batch', leave=False):
         image, mask_true = batch['image'], batch['mask']
-        # move images and labels to correct device and type
-        image = image.to(device=device, dtype=torch.float32)
-        mask_true = mask_true.to(device=device, dtype=torch.long)
-        mask_true = F.one_hot(mask_true, net.n_classes).permute(0, 3, 1, 2).float()
-
         # add position input if toggled on  
         if addpositions: 
             # Add absolute positions to input 
@@ -105,6 +100,11 @@ def test_net(net,
         if useatt: 
             attmap = batch['attmap']
             attmap = attmap.to(device=device, dtype=torch.float32)
+            
+        # move images and labels to correct device and type
+        image = image.to(device=device, dtype=torch.float32)
+        mask_true = mask_true.to(device=device, dtype=torch.long)
+        mask_true = F.one_hot(mask_true, net.n_classes).permute(0, 3, 1, 2).float()
         
         # predict and compute DICE score 
         with torch.no_grad():

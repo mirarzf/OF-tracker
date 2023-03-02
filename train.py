@@ -32,7 +32,7 @@ def set_seed(seed: int = 42) -> None:
     # When running on the CuDNN backend, two further options must be set
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
-    print(f"Random seed set as {seed} C'EST LE TRAIN ")
+    logging.info(f"Random seed set as {seed}. \n")
 # END REPRODUCIBILLITY 
 
 # DATA DIRECTORIES 

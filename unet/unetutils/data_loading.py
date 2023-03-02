@@ -8,19 +8,19 @@ import torch
 from PIL import Image
 from torch.utils.data import Dataset
 
-# REPRODUCIBILITY 
-import random
-def set_seed(seed: int = 42) -> None:
-    np.random.seed(seed)
-    random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    # When running on the CuDNN backend, two further options must be set
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
-    print(f"Random seed set as {seed}")
-set_seed(0)
-# END REPRODUCIBILLITY 
+# # REPRODUCIBILITY 
+# import random
+# def set_seed(seed: int = 42) -> None:
+#     np.random.seed(seed)
+#     random.seed(seed)
+#     torch.manual_seed(seed)
+#     torch.cuda.manual_seed(seed)
+#     # When running on the CuDNN backend, two further options must be set
+#     torch.backends.cudnn.deterministic = True
+#     torch.backends.cudnn.benchmark = False
+#     print(f"Random seed set as {seed}")
+# set_seed(0)
+# # END REPRODUCIBILLITY 
 
 class AttentionDataset(Dataset): 
     def __init__(self, images_dir: str, masks_dir: str, scale: float = 1.0, mask_suffix: str = '', transform = dict(), attmaps_dir: str = '', withatt: bool = True):

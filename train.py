@@ -32,8 +32,7 @@ def set_seed(seed: int = 42) -> None:
     # When running on the CuDNN backend, two further options must be set
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
-    print(f"Random seed set as {seed}")
-set_seed(0)
+    print(f"Random seed set as {seed} C'EST LE TRAIN ")
 # END REPRODUCIBILLITY 
 
 # DATA DIRECTORIES 
@@ -72,6 +71,9 @@ def train_net(net,
               lossframesdecay: bool = False, 
               addpositions: bool = False):
     
+    # 0. Setting seed for reproducibility 
+    set_seed(0)
+    
     # 1. Choose data augmentation transforms (using albumentations) 
     geotransform = A.Compose([ 
         A.HorizontalFlip(p=0.5)
@@ -101,11 +103,6 @@ def train_net(net,
     val_loader = DataLoader(val_set, shuffle=False, batch_size=batch_size, **loader_args)
 
     # (Initialize logging)
-    # project_name = 'U-Net'
-    # if useatt: 
-    #     project_name += '-w-attention'
-    # if addpositions: 
-    #     project_name += '-w-positions'
     project_name = "OF-Tracker"
     experiment = wandb.init(project=project_name, resume='allow', anonymous='must')
     experiment.config.update(dict(

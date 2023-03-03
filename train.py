@@ -95,6 +95,7 @@ def train_net(net,
     n_val = int(len(dataset) * val_percent)
     n_train = len(dataset) - n_val
     train_set, val_set = random_split(dataset, [n_train, n_val], generator=torch.Generator().manual_seed(0))
+    val_set.setApplyTransform(False) # To avoid data augmentation on the validation dataset 
 
     # 4. Create data loaders
     loader_args = dict(num_workers=4, pin_memory=True)
@@ -380,7 +381,7 @@ if __name__ == '__main__':
         raise
 
     # TESTING SECTION 
-    net.load_state_dict(best_model_state) # Recover the best model state, the one we usually keep 
+    net.load_state_dict(best_model_state, strict=True) # Recover the best model state, the one we usually keep 
     if args.test: 
         logging.info(f'Start testing... ')
         test_DICE = test_net(

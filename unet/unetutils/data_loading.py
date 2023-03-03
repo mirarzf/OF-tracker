@@ -23,8 +23,9 @@ from torch.utils.data import Dataset
 # # END REPRODUCIBILLITY 
 
 class AttentionDataset(Dataset): 
-    def __init__(self, images_dir: str, masks_dir: str, scale: float = 1.0, mask_suffix: str = '', transform = dict(), attmaps_dir: str = '', withatt: bool = True):
+    def __init__(self, images_dir: str, masks_dir: str, scale: float = 1.0, mask_suffix: str = '', transform = None, attmaps_dir: str = '', withatt: bool = True):
         self.withatt = withatt
+        self.applytransform = True 
 
         self.images_dir = Path(images_dir)
         self.masks_dir = Path(masks_dir)
@@ -32,13 +33,17 @@ class AttentionDataset(Dataset):
         assert 0 < scale <= 1, 'Scale must be between 0 and 1'
         self.scale = scale
         self.mask_suffix = mask_suffix
-        if 'geometric' in transform.keys(): 
-            self.geotransform = transform['geometric']
+        if transform != None: 
+            if 'geometric' in transform.keys(): 
+                self.geotransform = transform['geometric']
+            else: 
+                self.geotransform = None
+            if 'color' in transform.keys(): 
+                self.colortransform = transform['color']
+            else: 
+                self.colortransform = None 
         else: 
-            self.geotransform = None
-        if 'color' in transform.keys(): 
-            self.colortransform = transform['color']
-        else: 
+            self.geotransform = None 
             self.colortransform = None 
 
         self.ids = [splitext(file)[0] for file in listdir(images_dir) if not file.startswith('.')]
@@ -89,6 +94,9 @@ class AttentionDataset(Dataset):
     def getImageID(self, idx): 
         return self.ids[idx]
 
+    def setApplyTransform(self, applytransform: bool): 
+        self.applytransform = applytransform
+
     def __getitem__(self, idx):
         name = self.ids[idx]
         mask_file = list(self.masks_dir.glob(name + self.mask_suffix + '.*'))
@@ -115,7 +123,7 @@ class AttentionDataset(Dataset):
         #         f'Image and mask {name} should be the same size, but are {img.size} and {mask.size}'
         
         # Apply data augmentation 
-        if self.geotransform != None: 
+        if self.applytransform and self.geotransform != None: 
             if not self.withatt: 
                 transformed = self.geotransform(image=np.asarray(img), mask=np.asarray(mask))
             else: # self.withatt == True We use attention 
@@ -124,7 +132,7 @@ class AttentionDataset(Dataset):
             img = Image.fromarray(transformed['image'])
             mask = Image.fromarray(transformed['mask'])
         
-        if self.colortransform != None: 
+        if self.applytransform and self.colortransform != None: 
             img = Image.fromarray(self.colortransform(image=np.asarray(img))['image'])
 
         # Preprocess the images to turn them into an array 

@@ -63,9 +63,9 @@ def test_net(net,
               visualize: bool = False):
     # 1. Create dataset
     if useatt: 
-        test_set = AttentionDataset(images_dir=images_dir, masks_dir=masks_dir, scale=img_scale, attmaps_dir=attmaps_dir, transform = dict())
+        test_set = AttentionDataset(images_dir=images_dir, masks_dir=masks_dir, scale=img_scale, attmaps_dir=attmaps_dir)
     else: 
-        test_set = BasicDataset(images_dir=images_dir, masks_dir=masks_dir, scale=img_scale, transform = dict())
+        test_set = BasicDataset(images_dir=images_dir, masks_dir=masks_dir, scale=img_scale)
     
     # 2. Create data loader 
     loader_args = dict(num_workers=4, pin_memory=True)

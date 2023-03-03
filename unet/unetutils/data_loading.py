@@ -25,7 +25,6 @@ from torch.utils.data import Dataset
 class AttentionDataset(Dataset): 
     def __init__(self, images_dir: str, masks_dir: str, scale: float = 1.0, mask_suffix: str = '', transform = None, attmaps_dir: str = '', withatt: bool = True):
         self.withatt = withatt
-        self.applytransform = True 
 
         self.images_dir = Path(images_dir)
         self.masks_dir = Path(masks_dir)
@@ -94,9 +93,6 @@ class AttentionDataset(Dataset):
     def getImageID(self, idx): 
         return self.ids[idx]
 
-    def setApplyTransform(self, applytransform: bool): 
-        self.applytransform = applytransform
-
     def __getitem__(self, idx):
         name = self.ids[idx]
         mask_file = list(self.masks_dir.glob(name + self.mask_suffix + '.*'))
@@ -123,7 +119,7 @@ class AttentionDataset(Dataset):
         #         f'Image and mask {name} should be the same size, but are {img.size} and {mask.size}'
         
         # Apply data augmentation 
-        if self.applytransform and self.geotransform != None: 
+        if self.geotransform != None: 
             if not self.withatt: 
                 transformed = self.geotransform(image=np.asarray(img), mask=np.asarray(mask))
             else: # self.withatt == True We use attention 
@@ -132,7 +128,7 @@ class AttentionDataset(Dataset):
             img = Image.fromarray(transformed['image'])
             mask = Image.fromarray(transformed['mask'])
         
-        if self.applytransform and self.colortransform != None: 
+        if self.colortransform != None: 
             img = Image.fromarray(self.colortransform(image=np.asarray(img))['image'])
 
         # Preprocess the images to turn them into an array 

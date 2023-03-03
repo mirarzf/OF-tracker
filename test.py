@@ -44,8 +44,11 @@ ckp = "U-Net-3/checkpoint_epoch_best.pth"
 
 ##########################################################################################
 
-def mask_to_image(mask: np.ndarray, n_classes = 2):
-    return Image.fromarray((mask * 255 / (n_classes-1)).astype(np.uint8))
+def mask_to_image(mask: np.ndarray, n_classes = 2, finalsize = (0,0)):
+    img = Image.fromarray((mask * 255 / (n_classes-1)).astype(np.uint8))
+    if finalsize == (0,0): 
+        finalsize = img.size
+    return img.resize(finalsize)
 
 def test_net(net, 
               device,
@@ -130,7 +133,8 @@ def test_net(net,
             if savepred or visualize: 
                 index = batch['index']-1
                 filename = test_set.getImageID(index) + '.png'
-                mask_pred_img = mask_to_image(mask_pred[0].cpu().numpy(), net.n_classes)
+                imgsize = Image.open(imgdir / filename).size
+                mask_pred_img = mask_to_image(mask_pred[0].cpu().numpy(), net.n_classes, imgsize)
                 if savepred: 
                     logging.info(f"Saving prediction of {filename}")
                     mask_pred_img.save(outdir / filename)

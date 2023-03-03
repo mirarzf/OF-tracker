@@ -18,6 +18,8 @@ from evaluate import evaluate
 from test import test_net
 from unet.unet_model import UNet, UNetAtt
 
+from copy import deepcopy
+
 from test import test_net
 
 import matplotlib.pyplot as plt 
@@ -275,15 +277,16 @@ def train_net(net,
             if epoch == 1: 
                 best_loss = epoch_loss 
                 best_ckpt = 1 
-                if not save_checkpoint: 
-                    torch.save(net.state_dict(), str(dirckp / 'checkpoint_epoch_best.pth'))
-                    logging.info(f'Checkpoint {epoch} saved!')
+                torch.save(net.state_dict(), str(dirckp / 'checkpoint_epoch_best.pth'))
+                logging.info(f'Best checkpoint at {epoch} saved!')
+                best_model_state = deepcopy(net.state_dict())
             else: 
                 if epoch_loss < best_loss: 
                     best_loss = epoch_loss
                     best_ckpt = epoch
                     torch.save(net.state_dict(), str(dirckp / 'checkpoint_epoch_best.pth'))
                     logging.info(f'Best checkpoint at {epoch} saved!')
+                    best_model_state = deepcopy(net.state_dict())
             
             logging.info('Epoch loss: {}'.format(best_loss))
 
@@ -294,7 +297,7 @@ def train_net(net,
             'train loss epoch avg': epoch_loss, 
         })
     
-    return best_ckpt 
+    return best_ckpt, best_model_state
 
 def get_args():
     parser = argparse.ArgumentParser(description='Train the UNet on images and target masks')
@@ -356,7 +359,7 @@ if __name__ == '__main__':
     net.to(device=device)
     # TRAINING SECTION 
     try:
-        best_ckpt = train_net(
+        best_ckpt, best_model_state = train_net(
             net=net,
             epochs=args.epochs,
             batch_size=args.batch_size,
@@ -377,6 +380,7 @@ if __name__ == '__main__':
         raise
 
     # TESTING SECTION 
+    net.load_state_dict(best_model_state) # Recover the best model state, the one we usually keep 
     if args.test: 
         logging.info(f'Start testing... ')
         test_DICE = test_net(

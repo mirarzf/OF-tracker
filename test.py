@@ -62,10 +62,11 @@ def test_net(net,
               savepred: bool = True, 
               visualize: bool = False):
     # 1. Create dataset
+    ids = [file.stem for file in images_dir.iterdir() if file.is_file() and file.name != '.gitkeep']
     if useatt: 
-        test_set = AttentionDataset(images_dir=images_dir, masks_dir=masks_dir, scale=img_scale, attmaps_dir=attmaps_dir)
+        test_set = AttentionDataset(images_dir=images_dir, masks_dir=masks_dir, file_ids = ids, scale=img_scale, attmaps_dir=attmaps_dir)
     else: 
-        test_set = BasicDataset(images_dir=images_dir, masks_dir=masks_dir, scale=img_scale)
+        test_set = BasicDataset(images_dir=images_dir, masks_dir=masks_dir, file_ids = ids, scale=img_scale)
     
     # 2. Create data loader 
     loader_args = dict(num_workers=4, pin_memory=True)

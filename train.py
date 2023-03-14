@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader, random_split
 import albumentations as A
 from tqdm import tqdm
 
-from unet.unetutils.data_loading import BasicDataset, AttentionDataset
+from unet.unetutils.data_loading import AttentionDataset, BasicDataset
 from unet.unetutils.dice_score import dice_loss
 from evaluate import evaluate
 from test import test_net
@@ -71,7 +71,8 @@ def train_net(net,
               amp: bool = False, 
               useatt: bool = False, 
               lossframesdecay: bool = False, 
-              addpositions: bool = False):
+              addpositions: bool = False, 
+              foldnumber: int = 0):
     
     # 1. Choose data augmentation transforms (using albumentations) 
     geotransform = A.Compose([ 
@@ -84,17 +85,37 @@ def train_net(net,
     dataaugtransform = {'geometric': geotransform, 
                         'color': colortransform}
     # dataaugtransform = dict() ################################################### COMMENT IF YOU WANT DATA AUGMENTATION 
-    
-    # 2. Create dataset
-    if useatt: 
-        dataset = AttentionDataset(images_dir=dir_img, masks_dir=dir_mask, scale=img_scale, attmaps_dir=dir_attmap, transform = dataaugtransform)
-    else: 
-        dataset = BasicDataset(images_dir=dir_img, masks_dir=dir_mask, scale=img_scale, transform = dataaugtransform)
 
-    # 3. Split into train / validation partitions
-    n_val = int(len(dataset) * val_percent)
-    n_train = len(dataset) - n_val
-    train_set, val_set = random_split(dataset, [n_train, n_val], generator=torch.Generator().manual_seed(0))
+    # 2. Split into train / validation partitions
+    ids = [file.stem for file in dir_img.iterdir() if file.is_file() and file.name != '.gitkeep']
+    n_ids = len(ids)
+    data_indices = list(range(n_ids))
+    np.random.shuffle(data_indices)
+    # Create folds 
+    n_val = int(n_ids * val_percent)
+    k_number = n_ids // n_val
+    last_idx_of_split = []
+    q = n_ids // k_number 
+    r = n_ids % k_number
+    for i in range(k_number): 
+        if i < r: 
+            last_idx_of_split.append(i*q+1)
+        else: 
+            last_idx_of_split.append((i+1)*q)
+    last_idx_of_split.append(n_ids)
+    # Current fold number is (between [0;k-1]): 
+    train_ids = [ids[idx] for idx in data_indices[:last_idx_of_split[foldnumber]]+data_indices[last_idx_of_split[foldnumber+1]:]] 
+    n_train = len(train_ids)
+    val_ids = [ids[idx] for idx in data_indices[last_idx_of_split[foldnumber]:last_idx_of_split[foldnumber+1]]] 
+    n_val = len(val_ids)
+
+    # 3. Create datasets
+    if useatt: 
+        train_set = AttentionDataset(images_dir=dir_img, masks_dir=dir_mask, file_ids=train_ids, scale=img_scale, attmaps_dir=dir_attmap, transform = dataaugtransform)
+        val_set = AttentionDataset(images_dir=dir_img, masks_dir=dir_mask, file_ids=val_ids, scale=img_scale, attmaps_dir=dir_attmap, transform = dataaugtransform)
+    else: 
+        train_set = BasicDataset(images_dir=dir_img, masks_dir=dir_mask, file_ids=train_ids, scale=img_scale, transform = dataaugtransform)
+        val_set = BasicDataset(images_dir=dir_img, masks_dir=dir_mask, file_ids=val_ids, scale=img_scale, transform = dataaugtransform)
 
     # 4. Create data loaders
     loader_args = dict(num_workers=4, pin_memory=True)
@@ -102,7 +123,7 @@ def train_net(net,
     val_loader = DataLoader(val_set, shuffle=False, batch_size=batch_size, **loader_args)
 
     # (Initialize logging)
-    project_name = "OF-Tracker"
+    project_name = "OF-Tracker-testcode"
     experiment = wandb.init(project=project_name, resume='allow', anonymous='must')
     experiment.config.update(dict(
         epochs=epochs, 
@@ -320,6 +341,7 @@ def get_args():
     parser.add_argument('--test', action='store_true', default=False, help='Do the test after training')
     parser.add_argument('--viz', action='store_true', default=False, 
                         help='Visualize the images as they are processed')
+    parser.add_argument('--foldnb', default=0, help='Number of the fold for cross-fold validation')
     return parser.parse_args()
 
 
@@ -372,7 +394,8 @@ if __name__ == '__main__':
             amp=args.amp, 
             useatt=args.attention, 
             lossframesdecay=args.framesdecay, 
-            addpositions=args.wpos)
+            addpositions=args.wpos, 
+            foldnumber=args.foldnb)
         logging.info(f'Best model is found at checkpoint #{best_ckpt}.')
     except KeyboardInterrupt:
         torch.save(net.state_dict(), 'INTERRUPTED.pth')

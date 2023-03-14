@@ -23,7 +23,7 @@ from torch.utils.data import Dataset
 # # END REPRODUCIBILLITY 
 
 class AttentionDataset(Dataset): 
-    def __init__(self, images_dir: str, masks_dir: str, scale: float = 1.0, mask_suffix: str = '', transform = None, attmaps_dir: str = '', withatt: bool = True):
+    def __init__(self, images_dir: str, masks_dir: str, file_ids: list, scale: float = 1.0, mask_suffix: str = '', transform = None, attmaps_dir: str = '', withatt: bool = True):
         self.withatt = withatt
 
         self.images_dir = Path(images_dir)
@@ -45,9 +45,9 @@ class AttentionDataset(Dataset):
             self.geotransform = None 
             self.colortransform = None 
 
-        self.ids = [splitext(file)[0] for file in listdir(images_dir) if not file.startswith('.')]
+        self.ids = file_ids
         if not self.ids:
-            raise RuntimeError(f'No input file found in {images_dir}, make sure you put your images there')
+            raise RuntimeError(f'No input file found in {self.images_dir}, make sure you put your images there')
         logging.info(f'Creating dataset with {len(self.ids)} initial examples')
 
     def __len__(self):
@@ -148,17 +148,17 @@ class AttentionDataset(Dataset):
         return retdict
 
 class BasicDataset(AttentionDataset): 
-    def __init__(self, images_dir: str, masks_dir: str, scale: float = 1, mask_suffix: str = '', transform = dict(), attmaps_dir: str = '', withatt: bool = True):
-        super().__init__(images_dir, masks_dir, scale, mask_suffix, transform, attmaps_dir, withatt=False)
+    def __init__(self, images_dir: str, masks_dir: str, file_ids: list, scale: float = 1, mask_suffix: str = '', transform = dict(), attmaps_dir: str = '', withatt: bool = True):
+        super().__init__(images_dir, masks_dir, file_ids, scale, mask_suffix, transform, attmaps_dir, withatt=False)
 
 
 class CarvanaDataset(BasicDataset):
-    def __init__(self, images_dir, masks_dir, scale=1, transform = dict()):
-        super().__init__(images_dir, masks_dir, scale, mask_suffix='_mask', transform=transform)
+    def __init__(self, images_dir, masks_dir, file_ids: list, scale=1, transform = dict()):
+        super().__init__(images_dir, masks_dir, file_ids, scale, mask_suffix='_mask', transform=transform)
 
 class MaskDataset(AttentionDataset): 
-    def __init__(self, images_dir: str, masks_dir: str, scale: float = 1, mask_suffix: str = '', transform = dict(), attmaps_dir: str = '', withatt: bool = True):
-        super().__init__(images_dir, masks_dir, scale, mask_suffix, transform, attmaps_dir, withatt)
+    def __init__(self, images_dir: str, masks_dir: str, file_ids: list, scale: float = 1, mask_suffix: str = '', transform = dict(), attmaps_dir: str = '', withatt: bool = True):
+        super().__init__(images_dir, masks_dir, file_ids, scale, mask_suffix, transform, attmaps_dir, withatt)
 
     def __getitem__(self, idx):
         name = self.ids[idx]

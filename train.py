@@ -112,10 +112,10 @@ def train_net(net,
     # 3. Create datasets
     if useatt: 
         train_set = AttentionDataset(images_dir=dir_img, masks_dir=dir_mask, file_ids=train_ids, scale=img_scale, attmaps_dir=dir_attmap, transform = dataaugtransform)
-        val_set = AttentionDataset(images_dir=dir_img, masks_dir=dir_mask, file_ids=val_ids, scale=img_scale, attmaps_dir=dir_attmap, transform = dataaugtransform)
+        val_set = AttentionDataset(images_dir=dir_img, masks_dir=dir_mask, file_ids=val_ids, scale=img_scale, attmaps_dir=dir_attmap)
     else: 
         train_set = BasicDataset(images_dir=dir_img, masks_dir=dir_mask, file_ids=train_ids, scale=img_scale, transform = dataaugtransform)
-        val_set = BasicDataset(images_dir=dir_img, masks_dir=dir_mask, file_ids=val_ids, scale=img_scale, transform = dataaugtransform)
+        val_set = BasicDataset(images_dir=dir_img, masks_dir=dir_mask, file_ids=val_ids, scale=img_scale)
 
     # 4. Create data loaders
     loader_args = dict(num_workers=4, pin_memory=True)
@@ -296,20 +296,20 @@ def train_net(net,
         # 8. (Optional) Save best model 
         if save_best_checkpoint: 
             if epoch == 1: 
-                best_loss = epoch_loss 
+                best_valscore = val_score 
                 best_ckpt = 1 
                 torch.save(net.state_dict(), str(dirckp / 'checkpoint_epoch_best.pth'))
                 logging.info(f'Best checkpoint at {epoch} saved!')
                 best_model_state = deepcopy(net.state_dict())
             else: 
-                if epoch_loss < best_loss: 
-                    best_loss = epoch_loss
+                if val_score > best_valscore or n_val == 0: 
+                    best_valscore = val_score
                     best_ckpt = epoch
                     torch.save(net.state_dict(), str(dirckp / 'checkpoint_epoch_best.pth'))
                     logging.info(f'Best checkpoint at {epoch} saved!')
                     best_model_state = deepcopy(net.state_dict())
             
-            logging.info('Epoch loss: {}'.format(best_loss))
+            logging.info('Epoch loss: {}'.format(epoch_loss))
 
         # 9. Log all the previous parameters 
         experiment.log({

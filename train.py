@@ -201,16 +201,6 @@ def train_net(net,
                     else: 
                         masks_pred = net(images)
                     
-                    # # PRINT HISTOGRAMS OF THE VALUES -- DEBUG HISTOGRAMS ########################################################## 
-                    # with torch.no_grad(): 
-                        # if epoch == epochs: 
-                        #     class0 = masks_pred[0,0].detach().cpu().numpy()
-                        #     class1 = masks_pred[0,1].detach().cpu().numpy()
-                        #     plt.hist(class0.flatten())
-                        #     plt.hist(class1.flatten())
-                        #     plt.title("output")
-                        #     plt.show()
-
                     if net.n_classes == 1:
                         loss = criterion(masks_pred.squeeze(1), true_masks.float())
                         loss += dice_loss(F.sigmoid(masks_pred.squeeze(1)), true_masks.float(), multiclass=False)

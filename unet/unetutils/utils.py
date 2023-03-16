@@ -1,35 +1,43 @@
 import matplotlib.pyplot as plt
+import numpy as np 
 
-def plot_img_and_mask(img, mask):
-    classes = mask.shape[0] if len(mask.shape) > 2 else 1
-    fig, ax = plt.subplots(1, classes + 1)
+def plot_img_and_mask(img, mask, classes):
+    nb_class_columns = 1 if classes == 1 else classes - 1 
+    fig, ax = plt.subplots(1, nb_class_columns + 2) # We display the RGB image, the ground truth and each predicted class
     ax[0].set_title('Input image')
     ax[0].imshow(img)
+    ax[0].set_xticks([]), ax[0].set_yticks([])
+    ax[1].set_title('All classes in one')
+    ax[1].imshow(mask, cmap='gray', vmin=0, vmax=nb_class_columns)
+    ax[1].set_xticks([]), ax[1].set_yticks([])
     if classes > 1:
-        for i in range(classes):
-            ax[i + 1].set_title(f'Output mask (class {i + 1})')
-            ax[i + 1].imshow(255*mask[i, :, :], cmap='gray', vmin=0, vmax=255)
+        for i in range(nb_class_columns): # We ignore background class     
+            ax[i + 2].set_title(f'Output mask (class {i + 1})')
+            ax[i + 2].imshow(np.where(mask == i+1, 255, 0), cmap='gray', vmin=0, vmax=255)
+            ax[i + 2].set_xticks([]), ax[i + 2].set_yticks([])
     else:
-        ax[1].set_title(f'Output mask')
-        ax[1].imshow(mask, cmap='gray')
-    plt.xticks([]), plt.yticks([])
-    plt.colorbar()
+        ax[2].set_title(f'Output mask')
+        ax[2].imshow(mask, cmap='gray', vmin=0, vmax=255)
+        ax[2].set_xticks([]), ax[2].set_yticks([])
     plt.show()
 
 
-def plot_img_and_mask_and_gt(img, gt, mask):
-    classes = mask.shape[0] if len(mask.shape) > 2 else 1
-    fig, ax = plt.subplots(1, classes + 2)
+def plot_img_and_mask_and_gt(img, gt, mask, classes):
+    nb_class_columns = 1 if classes == 1 else classes - 1 
+    fig, ax = plt.subplots(1, nb_class_columns + 2) # We display the RGB image, the ground truth and each predicted class
     ax[0].set_title('Input image')
     ax[0].imshow(img)
+    ax[0].set_xticks([]), ax[0].set_yticks([])
     ax[1].set_title('Ground Truth')
     ax[1].imshow(gt, cmap='gray', vmin=0, vmax=1)
+    ax[1].set_xticks([]), ax[1].set_yticks([])
     if classes > 1:
-        for i in range(classes):
+        for i in range(nb_class_columns): # We ignore background class     
             ax[i + 2].set_title(f'Output mask (class {i + 1})')
-            ax[i + 2].imshow(255*mask[i, :, :], cmap='gray', vmin=0, vmax=255)
+            ax[i + 2].imshow(np.where(mask == i+1, 255, 0), cmap='gray', vmin=0, vmax=255)
+            ax[i + 2].set_xticks([]), ax[i + 2].set_yticks([])
     else:
         ax[2].set_title(f'Output mask')
-        ax[2].imshow(mask, cmap='gray', vmin=0, vmax=1)
-    plt.xticks([]), plt.yticks([])
+        ax[2].imshow(mask, cmap='gray', vmin=0, vmax=255)
+        ax[2].set_xticks([]), ax[2].set_yticks([])
     plt.show()

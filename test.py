@@ -108,7 +108,7 @@ def test_net(net,
         # move images and labels to correct device and type
         image = image.to(device=device, dtype=torch.float32)
         mask_true = mask_true.to(device=device, dtype=torch.long)
-        mask_true = F.one_hot(mask_true, net.n_classes).permute(0, 3, 1, 2).float()
+        one_hot_mask_true = F.one_hot(mask_true, net.n_classes).permute(0, 3, 1, 2).float()
         
         # predict and compute DICE score 
         with torch.no_grad():
@@ -122,25 +122,25 @@ def test_net(net,
                 # convert to one-hot format
                 mask_pred = (F.sigmoid(mask_pred) > mask_threshold).float()
                 # compute the Dice score
-                dice_score += dice_coeff(mask_pred, mask_true, reduce_batch_first=False)
+                dice_score += dice_coeff(mask_pred, one_hot_mask_true, reduce_batch_first=False)
             else:
                 mask_pred = mask_pred.argmax(dim=1)
                 # convert to one-hot format
                 one_hot_mask_pred = F.one_hot(mask_pred, net.n_classes).permute(0, 3, 1, 2).float()
                 # compute the Dice score, ignoring background (because multiclass)
-                dice_score += multiclass_dice_coeff(one_hot_mask_pred[:, 1:, ...], mask_true[:, 1:, ...], reduce_batch_first=False)
+                dice_score += multiclass_dice_coeff(one_hot_mask_pred[:, 1:, ...], one_hot_mask_true[:, 1:, ...], reduce_batch_first=False)
 
             # 4. Save or visualize predicted masks if toggled on 
             if savepred or visualize: 
                 index = batch['index']-1
                 filename = test_set.getImageID(index) + '.png'
                 imgsize = Image.open(imgdir / filename).size
-                mask_pred_img = mask_to_image(mask_pred[0].cpu().numpy(), net.n_classes, imgsize)
                 if savepred: 
                     logging.info(f"Saving prediction of {filename}")
+                    mask_pred_img = mask_to_image(mask_pred[0].cpu().numpy(), net.n_classes, imgsize)
                     mask_pred_img.save(outdir / filename)
                 if visualize:
-                    plot_img_and_mask_and_gt(image, mask_true, mask_pred_img) 
+                    plot_img_and_mask_and_gt(image[0].cpu().numpy().transpose((1,2,0)), mask_true[0].cpu().numpy(), mask_pred[0].cpu().numpy(), net.n_classes) 
 
     net.train()
 

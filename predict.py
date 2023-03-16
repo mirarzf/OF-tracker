@@ -12,6 +12,7 @@ from torchvision import transforms
 from unet.unetutils.data_loading import AttentionDataset
 from unet.unet_model import UNet, UNetAtt
 from unet.unetutils.utils import plot_img_and_mask
+from test import mask_to_image
 
 import os
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
@@ -33,15 +34,19 @@ ckp = "U-Net-5-w-positions/tKU_bs16_e50_lr1e-1_old.pth"
 
 
 def predict_img(net,
-                full_img,
+                full_img: Image,
+                out_filename: str, 
                 device,
-                scale_factor=1,
-                out_threshold=0.5, 
+                img_scale: float = 1,
+                mask_threshold: float =0.5, 
                 useatt: bool = False, 
-                full_attmap = None, 
-                addpositions: bool = False):
+                full_attmap: Image = None, 
+                addpositions: bool = False, 
+                savepred: bool = True, 
+                visualize: bool = False):
     net.eval()
-    img = torch.from_numpy(AttentionDataset.preprocess(full_img, scale_factor, is_mask=False))
+    imgsize = full_img.size
+    img = torch.from_numpy(AttentionDataset.preprocess(full_img, img_scale, is_mask=False))
     if addpositions: 
         # Add normalized positions to input 
         _, w, h = img.shape
@@ -55,34 +60,31 @@ def predict_img(net,
     img = img.to(device=device, dtype=torch.float32)
 
     if useatt: 
-        attmap = torch.from_numpy(AttentionDataset.preprocess(full_attmap, scale_factor, is_mask=True))
+        attmap = torch.from_numpy(AttentionDataset.preprocess(full_attmap, img_scale, is_mask=True))
         attmap = attmap.unsqueeze(0)
         attmap = attmap.to(device=device, dtype=torch.float32)
 
     with torch.no_grad():
+        # predict the mask 
         if useatt: 
-            output = net(img, attmap)
+            mask_pred = net(img, attmap)
         else: 
-            output = net(img)
-
-        if net.n_classes > 1:
-            probs = F.softmax(output, dim=1)[0]
+            mask_pred = net(img)
+### 
+        if net.n_classes == 1:
+            # convert to one-hot format
+            mask_pred = (F.sigmoid(mask_pred) > mask_threshold).float()
         else:
-            probs = torch.sigmoid(output)[0]
-
-        tf = transforms.Compose([
-            transforms.ToPILImage(),
-            transforms.Resize((full_img.size[1], full_img.size[0])),
-            transforms.ToTensor()
-        ])
-
-        full_mask = tf(probs.cpu()).squeeze()
-
-    if net.n_classes == 1:
-        return (full_mask > out_threshold).numpy()
-    else:
-        return F.one_hot(full_mask.argmax(dim=0), net.n_classes).permute(2, 0, 1).numpy()
-
+            mask_pred = mask_pred.argmax(dim=1)
+        
+        mask_pred_img = mask_to_image(mask_pred[0].cpu().numpy(), net.n_classes, imgsize)
+        if savepred: 
+            logging.info(f"Mask saved to {out_filename}")
+            mask_pred_img.save(out_filename)
+        if visualize:
+            plot_img_and_mask(img[0].cpu().numpy().transpose((1,2,0)), mask_pred[0].cpu().numpy(), net.n_classes) 
+            logging.info(f'Visualizing results for image {filename}, close to continue...')
+            
 
 def get_args():
     parser = argparse.ArgumentParser(description='Predict masks from input images')
@@ -116,11 +118,11 @@ def get_attmap_filenames(args):
     else: 
         return args.input_att 
 
-def mask_to_image(mask: np.ndarray):
-    if mask.ndim == 2:
-        return Image.fromarray((mask * 255).astype(np.uint8))
-    elif mask.ndim == 3:
-        return Image.fromarray((np.argmax(mask, axis=0) * 255 / mask.shape[0]).astype(np.uint8))
+# def mask_to_image(mask: np.ndarray):
+#     if mask.ndim == 2:
+#         return Image.fromarray((mask * 255).astype(np.uint8))
+#     elif mask.ndim == 3:
+#         return Image.fromarray((np.argmax(mask, axis=0) * 255 / mask.shape[0]).astype(np.uint8))
 
 
 if __name__ == '__main__':
@@ -165,22 +167,26 @@ if __name__ == '__main__':
             attmap = Image.open(in_files_att[i])
         else: 
             attmap = None 
+        
+        out_filename = out_files[i]
+        predict_img(net=net,
+                    full_img=img,
+                    out_filename=out_filename, 
+                    img_scale=args.scale,
+                    mask_threshold=args.mask_threshold,
+                    device=device, 
+                    useatt=useatt, 
+                    full_attmap=attmap, 
+                    addpositions=args.wpos, 
+                    savepred=not args.no_save, 
+                    visualize=args.viz)
 
-        mask = predict_img(net=net,
-                           full_img=img,
-                           scale_factor=args.scale,
-                           out_threshold=args.mask_threshold,
-                           device=device, 
-                           useatt=useatt, 
-                           full_attmap=attmap, 
-                           addpositions=args.wpos)
+        # if not args.no_save:
+        #     out_filename = out_files[i]
+        #     result = mask_to_image(mask)
+        #     result.save(out_filename)
+        #     logging.info(f'Mask saved to {out_filename}')
 
-        if not args.no_save:
-            out_filename = out_files[i]
-            result = mask_to_image(mask)
-            result.save(out_filename)
-            logging.info(f'Mask saved to {out_filename}')
-
-        if args.viz:
-            logging.info(f'Visualizing results for image {filename}, close to continue...')
-            plot_img_and_mask(img, mask)
+        # if args.viz:
+        #     logging.info(f'Visualizing results for image {filename}, close to continue...')
+        #     plot_img_and_mask(img, mask)

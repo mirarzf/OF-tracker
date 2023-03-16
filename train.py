@@ -91,22 +91,26 @@ def train_net(net,
     n_ids = len(ids)
     data_indices = list(range(n_ids))
     np.random.shuffle(data_indices)
-    # Create folds 
+    # Create folds if validation percentage is not 0 
     n_val = int(n_ids * val_percent)
-    k_number = n_ids // n_val
-    last_idx_of_split = []
-    q = n_ids // k_number 
-    r = n_ids % k_number
-    for i in range(k_number): 
-        if i < r: 
-            last_idx_of_split.append(i*q+1)
-        else: 
-            last_idx_of_split.append((i+1)*q)
-    last_idx_of_split.append(n_ids)
-    # Current fold number is (between [0;k-1]): 
-    train_ids = [ids[idx] for idx in data_indices[:last_idx_of_split[foldnumber]]+data_indices[last_idx_of_split[foldnumber+1]:]] 
+    if n_val != 0: 
+        k_number = n_ids // n_val
+        last_idx_of_split = []
+        q = n_ids // k_number 
+        r = n_ids % k_number
+        for i in range(k_number): 
+            if i < r: 
+                last_idx_of_split.append(i*q+1)
+            else: 
+                last_idx_of_split.append((i+1)*q)
+        last_idx_of_split.append(n_ids)
+        # Current fold number is (between [0;k-1]): 
+        train_ids = [ids[idx] for idx in data_indices[:last_idx_of_split[foldnumber]]+data_indices[last_idx_of_split[foldnumber+1]:]] 
+        val_ids = [ids[idx] for idx in data_indices[last_idx_of_split[foldnumber]:last_idx_of_split[foldnumber+1]]] 
+    else: 
+        train_ids = ids 
+        val_ids = [] 
     n_train = len(train_ids)
-    val_ids = [ids[idx] for idx in data_indices[last_idx_of_split[foldnumber]:last_idx_of_split[foldnumber+1]]] 
     n_val = len(val_ids)
 
     # 3. Create datasets

@@ -8,20 +8,6 @@ import torch
 from PIL import Image
 from torch.utils.data import Dataset
 
-# # REPRODUCIBILITY 
-# import random
-# def set_seed(seed: int = 42) -> None:
-#     np.random.seed(seed)
-#     random.seed(seed)
-#     torch.manual_seed(seed)
-#     torch.cuda.manual_seed(seed)
-#     # When running on the CuDNN backend, two further options must be set
-#     torch.backends.cudnn.deterministic = True
-#     torch.backends.cudnn.benchmark = False
-#     print(f"Random seed set as {seed}")
-# set_seed(0)
-# # END REPRODUCIBILLITY 
-
 class AttentionDataset(Dataset): 
     def __init__(self, images_dir: str, masks_dir: str, file_ids: list, scale: float = 1.0, mask_suffix: str = '', transform = None, attmaps_dir: str = '', withatt: bool = True):
         self.withatt = withatt
@@ -45,9 +31,9 @@ class AttentionDataset(Dataset):
             self.geotransform = None 
             self.colortransform = None 
 
-        self.ids = file_ids
-        if not self.ids:
-            raise RuntimeError(f'No input file found in {self.images_dir}, make sure you put your images there')
+        self.ids = [] if len(file_ids) == 0 else file_ids
+        # if not self.ids:
+        #     raise RuntimeError(f'No input file found in {self.images_dir}, make sure you put your images there')
         logging.info(f'Creating dataset with {len(self.ids)} initial examples')
 
     def __len__(self):

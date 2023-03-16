@@ -70,7 +70,7 @@ def predict_img(net,
             mask_pred = net(img, attmap)
         else: 
             mask_pred = net(img)
-### 
+            
         if net.n_classes == 1:
             # convert to one-hot format
             mask_pred = (F.sigmoid(mask_pred) > mask_threshold).float()
@@ -84,7 +84,6 @@ def predict_img(net,
         if visualize:
             plot_img_and_mask(img[0].cpu().numpy().transpose((1,2,0))[:,:,:3], mask_pred[0].cpu().numpy(), net.n_classes) 
             logging.info(f'Visualizing results for image {filename}, close to continue...')
-            
 
 def get_args():
     parser = argparse.ArgumentParser(description='Predict masks from input images')

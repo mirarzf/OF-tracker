@@ -7,7 +7,6 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from PIL import Image
-from torchvision import transforms
 
 from unet.unetutils.data_loading import AttentionDataset
 from unet.unet_model import UNet, UNetAtt
@@ -22,7 +21,8 @@ os.environ['KMP_DUPLICATE_LIB_OK']='True'
 # imgdir = Path("../data/GTEA/frames")
 # imgdir = Path('D:\\Master Thesis\\data\\KU\\train')
 # imgdir = Path('D:\\Master Thesis\\data\\KU\\test')
-imgdir = Path("./data/test/imgs")
+# imgdir = Path("./data/test/imgs")
+imgdir = Path("./data/test/imgs_without_gt")
 imgfilenames = [f for f in imgdir.iterdir() if f.is_file() and 'mirrored' not in f.name] 
 attmapdir = None # Path("./")
 # attmapdir = Path('D:\\Master Thesis\\data\\KU\\testannot')
@@ -82,7 +82,7 @@ def predict_img(net,
             logging.info(f"Mask saved to {out_filename}")
             mask_pred_img.save(out_filename)
         if visualize:
-            plot_img_and_mask(img[0].cpu().numpy().transpose((1,2,0)), mask_pred[0].cpu().numpy(), net.n_classes) 
+            plot_img_and_mask(img[0].cpu().numpy().transpose((1,2,0))[:,:,:3], mask_pred[0].cpu().numpy(), net.n_classes) 
             logging.info(f'Visualizing results for image {filename}, close to continue...')
             
 
@@ -117,13 +117,6 @@ def get_attmap_filenames(args):
         return [attmapdir / f.name for f in imgfilenames]
     else: 
         return args.input_att 
-
-# def mask_to_image(mask: np.ndarray):
-#     if mask.ndim == 2:
-#         return Image.fromarray((mask * 255).astype(np.uint8))
-#     elif mask.ndim == 3:
-#         return Image.fromarray((np.argmax(mask, axis=0) * 255 / mask.shape[0]).astype(np.uint8))
-
 
 if __name__ == '__main__':
     args = get_args()
@@ -180,13 +173,3 @@ if __name__ == '__main__':
                     addpositions=args.wpos, 
                     savepred=not args.no_save, 
                     visualize=args.viz)
-
-        # if not args.no_save:
-        #     out_filename = out_files[i]
-        #     result = mask_to_image(mask)
-        #     result.save(out_filename)
-        #     logging.info(f'Mask saved to {out_filename}')
-
-        # if args.viz:
-        #     logging.info(f'Visualizing results for image {filename}, close to continue...')
-        #     plot_img_and_mask(img, mask)

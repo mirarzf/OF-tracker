@@ -140,7 +140,7 @@ def test_net(net,
                     mask_pred_img = mask_to_image(mask_pred[0].cpu().numpy(), net.n_classes, imgsize)
                     mask_pred_img.save(outdir / filename)
                 if visualize:
-                    plot_img_and_mask_and_gt(image[0].cpu().numpy().transpose((1,2,0)), mask_true[0].cpu().numpy(), mask_pred[0].cpu().numpy(), net.n_classes) 
+                    plot_img_and_mask_and_gt(image[0].cpu().numpy().transpose((1,2,0))[:,:,:3], mask_true[0].cpu().numpy(), mask_pred[0].cpu().numpy(), net.n_classes) 
 
     net.train()
 

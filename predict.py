@@ -20,9 +20,9 @@ os.environ['KMP_DUPLICATE_LIB_OK']='True'
 # CHOOSE INPUT DIRECTORIES 
 # imgdir = Path("../data/GTEA/frames")
 # imgdir = Path('D:\\Master Thesis\\data\\KU\\train')
-imgdir = Path('D:\\Master Thesis\\data\\KU\\test')
-imgfilenames = [f for f in imgdir.glob('*.png') if f.is_file() and 'mirrored' not in f.name] 
-# imgdir = Path("./data/imgs")
+# imgdir = Path('D:\\Master Thesis\\data\\KU\\test')
+imgdir = Path("./data/test/imgs")
+imgfilenames = [f for f in imgdir.iterdir() if f.is_file() and 'mirrored' not in f.name] 
 attmapdir = None # Path("./")
 # attmapdir = Path('D:\\Master Thesis\\data\\KU\\testannot')
 # attmapdir = Path("./data/attmaps")

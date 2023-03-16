@@ -22,8 +22,6 @@ from copy import deepcopy
 
 from test import test_net
 
-import matplotlib.pyplot as plt 
-
 # REPRODUCIBILITY 
 import random
 def set_seed(seed: int = 42) -> None:

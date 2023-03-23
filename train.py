@@ -110,7 +110,7 @@ def train_net(net,
         val_ids = [] 
     ### SELECT IDs FOR SEQUENCE TRAINING ### 
     train_ids = [id for id in ids if "2108_2112" not in id]
-    n_val = val_percent * len(train_ids)
+    n_val = int(val_percent * len(train_ids))
     val_ids = [id for id in ids if "2108_2112" in id]
     val_ids = val_ids[:n_val]
     ### END OF SELECT IDs FOR SEQUENCE TRAINING ###

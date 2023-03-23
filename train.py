@@ -112,13 +112,9 @@ def train_net(net,
     banned_id = "0838"
     train_ids = [id for id in ids if banned_id not in id]
     val_ids = [id for id in ids if banned_id in id]
-    n_val = int(val_percent * n_ids)
-    if n_val <= len(val_ids): 
-        val_ids = val_ids[:n_val]
-    else: 
-        n_train = int(len(val_ids) / val_percent)
-        train_ids = [ids[i] for i in data_indices if banned_id not in ids[i]]
-        train_ids = train_ids[:n_train]
+    n_train = int(len(val_ids) / val_percent)
+    train_ids = [ids[i] for i in data_indices if banned_id not in ids[i]]
+    train_ids = train_ids[:n_train]
     ### END OF SELECT IDs FOR SEQUENCE TRAINING ###
     n_train = len(train_ids)
     n_val = len(val_ids)

@@ -109,11 +109,16 @@ def train_net(net,
         train_ids = ids 
         val_ids = [] 
     ### SELECT IDs FOR SEQUENCE TRAINING ### 
-    banned_id = "5909_5915"
+    banned_id = "0838"
     train_ids = [id for id in ids if banned_id not in id]
-    n_val = int(val_percent * len(train_ids))
     val_ids = [id for id in ids if banned_id in id]
-    val_ids = val_ids[:n_val]
+    n_val = int(val_percent * n_ids)
+    if n_val <= len(val_ids): 
+        val_ids = val_ids[:n_val]
+    else: 
+        n_train = int(len(val_ids) / val_percent)
+        train_ids = [ids[i] for i in data_indices if banned_id not in ids[i]]
+        train_ids = train_ids[:n_train]
     ### END OF SELECT IDs FOR SEQUENCE TRAINING ###
     n_train = len(train_ids)
     n_val = len(val_ids)
@@ -147,7 +152,9 @@ def train_net(net,
         amp=amp, 
         use_attention=useatt, 
         use_positions=addpositions, 
-        augmented_data=(True if 'geometric' in dataaugtransform.keys() else False)
+        augmented_data=(True if 'geometric' in dataaugtransform.keys() else False), 
+        validation_size=n_val, 
+        training_size = n_train
         ))
 
     logging.info(f'''Starting training:

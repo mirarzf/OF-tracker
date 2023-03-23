@@ -109,14 +109,13 @@ def train_net(net,
         train_ids = ids 
         val_ids = [] 
     ### SELECT IDs FOR SEQUENCE TRAINING ### 
-    train_ids = [id for id in ids if "2108_2112" not in id]
+    train_ids = [id for id in ids if "5909_5915" not in id]
     n_val = int(val_percent * len(train_ids))
-    val_ids = [id for id in ids if "2108_2112" in id]
+    val_ids = [id for id in ids if "5909_5915" in id]
     val_ids = val_ids[:n_val]
     ### END OF SELECT IDs FOR SEQUENCE TRAINING ###
     n_train = len(train_ids)
     n_val = len(val_ids)
-    val_percent = round(n_val / n_train, 2)
     logging.info(f'''Validation dataset contains following ids: {val_ids}''')
 
     # 3. Create datasets
@@ -126,6 +125,8 @@ def train_net(net,
     else: 
         train_set = BasicDataset(images_dir=dir_img, masks_dir=dir_mask, file_ids=train_ids, scale=img_scale, transform = dataaugtransform)
         val_set = BasicDataset(images_dir=dir_img, masks_dir=dir_mask, file_ids=val_ids, scale=img_scale)
+
+    print(len(val_set)) ############################ DEBUG PRINT 
 
     # 4. Create data loaders
     loader_args = dict(num_workers=4, pin_memory=True)

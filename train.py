@@ -116,7 +116,7 @@ def train_net(net,
     ### END OF SELECT IDs FOR SEQUENCE TRAINING ###
     n_train = len(train_ids)
     n_val = len(val_ids)
-    val_percent = n_val / n_train
+    val_percent = round(n_val / n_train, 2)
     logging.info(f'''Validation dataset contains following ids: {val_ids}''')
 
     # 3. Create datasets

@@ -109,7 +109,7 @@ def train_net(net,
         train_ids = ids 
         val_ids = [] 
     ### SELECT IDs FOR SEQUENCE TRAINING ### 
-    banned_id = "0838"
+    banned_id = "2108_2112"
     train_ids = [id for id in ids if banned_id not in id]
     val_ids = [id for id in ids if banned_id in id]
     n_train = int(len(val_ids) / val_percent)

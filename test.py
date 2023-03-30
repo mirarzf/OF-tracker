@@ -55,7 +55,7 @@ def test_net(net,
               images_dir, 
               masks_dir, 
               attmaps_dir, 
-              img_scale: float = 0.5,
+              img_scale: float = 1.0,
               mask_threshold: float = 0.5, 
               useatt: bool = False, 
               addpositions: bool = False, 
@@ -164,7 +164,7 @@ def get_args():
                         help='Visualize the images as they are processed')
     parser.add_argument('--mask_threshold', '-t', type=float, default=0.5,
                         help='Minimum probability value to consider a mask pixel white')
-    parser.add_argument('--scale', '-s', type=float, default=0.5,
+    parser.add_argument('--scale', '-s', type=float, default=1.0,
                         help='Scale factor for the input images')
     parser.add_argument('--bilinear', action='store_true', default=False, help='Use bilinear upsampling')
     parser.add_argument('--classes', '-c', type=int, default=2, help='Number of classes')

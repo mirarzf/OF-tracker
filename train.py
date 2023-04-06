@@ -116,8 +116,22 @@ def train_net(net,
     # train_ids = [ids[i] for i in data_indices if banned_id not in ids[i]]
     # train_ids = train_ids[:n_train]
     # ### END OF SELECT IDs FOR SEQUENCE TRAINING ###
+    ### SELECT IDs FOR HAND PICKED VALIDATION SET ### 
+    val_ids = ["0838_0917_extract_10", 
+             "0838_0917_extract_100", 
+             "0838_0917_extract_400", 
+             "2108_2112_extract_110",
+             "5909_5915_extract_10", 
+             "5909_5915_extract_70", 
+             "5909_5915_extract_140", 
+             "green0410_0452_extract_750", 
+             "green0410_0452_extract_800", 
+             "green0410_0452_extract_1000"]
+    train_ids = [id for id in ids if id not in val_ids]
+    ### END OF SELECT IDs FOR HAND PICKED VALIDATION SET ### 
     n_train = len(train_ids)
     n_val = len(val_ids)
+    val_percent = round(n_val/n_train,2) 
     logging.info(f'''Validation dataset contains following ids: {val_ids}''')
 
     # 3. Create datasets
@@ -407,9 +421,10 @@ if __name__ == '__main__':
         logging.info('Saved interrupt')
         raise
 
-    # TESTING SECTION 
-    net.load_state_dict(best_model_state, strict=True) # Recover the best model state, the one we usually keep 
+    # TESTING SECTION     
     if args.test: 
+        best_model_state.to(device=device)
+        net.load_state_dict(best_model_state, strict=True) # Recover the best model state, the one we usually keep 
         logging.info(f'Start testing... ')
         test_DICE = test_net(
         net, 

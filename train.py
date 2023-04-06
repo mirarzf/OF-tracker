@@ -423,11 +423,19 @@ if __name__ == '__main__':
 
     # TESTING SECTION     
     if args.test: 
-        best_model_state.to(device=device)
-        net.load_state_dict(best_model_state, strict=True) # Recover the best model state, the one we usually keep 
+        # Change here to adapt to your data
+        # n_channels=3 for RGB images
+        # n_classes is the number of probabilities you want to get per pixel
+        # if the model with attention is used, a different model will be loaded 
+        if args.attention: 
+            testnet = UNetAtt(n_channels=n_channels, n_classes=args.classes, bilinear=args.bilinear)
+        else: 
+            testnet = UNet(n_channels=n_channels, n_classes=args.classes, bilinear=args.bilinear)
+        testnet.load_state_dict(best_model_state, strict=True) # Recover the best model state, the one we usually keep 
+        testnet.to(device=device)
         logging.info(f'Start testing... ')
         test_DICE = test_net(
-        net, 
+        testnet, 
         device=device,
         images_dir=dir_img_test, 
         masks_dir=dir_mask_test, 

@@ -112,9 +112,10 @@ def train_net(net,
     banned_id = "green0410_0452"
     # train_ids = [id for id in ids if banned_id not in id]
     # val_ids = [id for id in ids if banned_id in id]
+    # train_ids = [ids[i] for i in data_indices if banned_id not in ids[i]]
     val_ids = [id for id in ids if banned_id not in id]
     train_ids = [id for id in ids if banned_id in id]
-    train_ids = [ids[i] for i in data_indices if banned_id not in ids[i]]
+    val_ids = [ids[i] for i in data_indices if banned_id not in ids[i]]
     ### END OF SELECT IDs FOR SEQUENCE TRAINING ###
     # ### SELECT IDs FOR HAND PICKED VALIDATION SET ### 
     # val_ids = ["0838_0917_extract_10", 

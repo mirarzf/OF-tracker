@@ -109,7 +109,7 @@ def train_net(net,
         train_ids = ids 
         val_ids = [] 
     ### SELECT IDs FOR SEQUENCE TRAINING ### 
-    banned_id = "2108_2112"
+    banned_id = "5909_5915"
     train_ids = [id for id in ids if banned_id not in id]
     val_ids = [id for id in ids if banned_id in id]
     train_ids = [ids[i] for i in data_indices if banned_id not in ids[i]]
@@ -429,7 +429,7 @@ if __name__ == '__main__':
             testnet = UNetAtt(n_channels=n_channels, n_classes=args.classes, bilinear=args.bilinear)
         else: 
             testnet = UNet(n_channels=n_channels, n_classes=args.classes, bilinear=args.bilinear)
-        testnet.load_state_dict(best_model_state, strict=True) # Recover the best model state, the one we usually keep 
+        testnet.load_state_dict(best_model_state, strict=False) # Recover the best model state, the one we usually keep 
         testnet.to(device=device)
         logging.info(f'Start testing... ')
         test_DICE = test_net(

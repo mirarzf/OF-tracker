@@ -203,8 +203,8 @@ def train_net(net,
                 if addpositions: 
                     # Add normalized positions to input 
                     _, batchsize, w, h = images.shape
-                    x = 10*torch.tensor(np.arange(h)/(h-1)) #################################################### MULTIPLICATION PAR 10 DE L'INPUT POSITION
-                    y = 10*torch.tensor(np.arange(w)/(w-1))
+                    x = torch.tensor(10*np.arange(h)/(h-1)) #################################################### MULTIPLICATION PAR 10 DE L'INPUT POSITION
+                    y = torch.tensor(10*np.arange(w)/(w-1))
                     grid_x, grid_y = torch.meshgrid(x, y, indexing='ij')
                     grid_x = grid_x.repeat(len(images), 1, 1, 1)
                     grid_y = grid_y.repeat(len(images), 1, 1, 1)

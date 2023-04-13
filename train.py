@@ -108,28 +108,28 @@ def train_net(net,
     else: 
         train_ids = ids 
         val_ids = [] 
-    ### SELECT IDs FOR SEQUENCE TRAINING ### 
-    banned_id = "green0410_0452"
+    # ### SELECT IDs FOR SEQUENCE TRAINING ### 
+    # banned_id = "green0410_0452"
     # train_ids = [id for id in ids if banned_id not in id]
     # val_ids = [id for id in ids if banned_id in id]
     # train_ids = [ids[i] for i in data_indices if banned_id not in ids[i]]
-    val_ids = [id for id in ids if banned_id not in id]
-    train_ids = [id for id in ids if banned_id in id]
-    val_ids = [ids[i] for i in data_indices if banned_id not in ids[i]]
-    ### END OF SELECT IDs FOR SEQUENCE TRAINING ###
-    # ### SELECT IDs FOR HAND PICKED VALIDATION SET ### 
-    # val_ids = ["0838_0917_extract_10", 
-    #          "0838_0917_extract_100", 
-    #          "0838_0917_extract_400", 
-    #          "2108_2112_extract_110",
-    #          "5909_5915_extract_10", 
-    #          "5909_5915_extract_70", 
-    #          "5909_5915_extract_140", 
-    #          "green0410_0452_extract_750", 
-    #          "green0410_0452_extract_800", 
-    #          "green0410_0452_extract_1000"]
-    # train_ids = [id for id in ids if id not in val_ids]
-    # ### END OF SELECT IDs FOR HAND PICKED VALIDATION SET ### 
+    # # val_ids = [id for id in ids if banned_id not in id]
+    # # train_ids = [id for id in ids if banned_id in id]
+    # # train_ids = [ids[i] for i in data_indices if banned_id in ids[i]]
+    # ### END OF SELECT IDs FOR SEQUENCE TRAINING ###
+    ### SELECT IDs FOR HAND PICKED VALIDATION SET ### 
+    val_ids = ["0838_0917_extract_10", 
+             "0838_0917_extract_100", 
+             "0838_0917_extract_400", 
+             "2108_2112_extract_110",
+             "5909_5915_extract_10", 
+             "5909_5915_extract_70", 
+             "5909_5915_extract_140", 
+             "green0410_0452_extract_750", 
+             "green0410_0452_extract_800", 
+             "green0410_0452_extract_1000"]
+    train_ids = [id for id in ids if id not in val_ids]
+    ### END OF SELECT IDs FOR HAND PICKED VALIDATION SET ### 
     n_train = len(train_ids)
     n_val = len(val_ids)
     val_percent = round(n_val/n_train,2) 
@@ -203,8 +203,8 @@ def train_net(net,
                 if addpositions: 
                     # Add normalized positions to input 
                     _, batchsize, w, h = images.shape
-                    x = torch.tensor(np.arange(h)/(h-1))
-                    y = torch.tensor(np.arange(w)/(w-1))
+                    x = 10*torch.tensor(np.arange(h)/(h-1)) #################################################### MULTIPLICATION PAR 10 DE L'INPUT POSITION
+                    y = 10*torch.tensor(np.arange(w)/(w-1))
                     grid_x, grid_y = torch.meshgrid(x, y, indexing='ij')
                     grid_x = grid_x.repeat(len(images), 1, 1, 1)
                     grid_y = grid_y.repeat(len(images), 1, 1, 1)

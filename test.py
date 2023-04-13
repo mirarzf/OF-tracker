@@ -93,8 +93,8 @@ def test_net(net,
         if addpositions: 
             # Add absolute positions to input 
             batchsize, _, w, h = image.shape
-            x = torch.tensor(10*np.arange(h)/(h-1)) ################################ MULTIPLY BY 10 IN POSITIONS 
-            y = torch.tensor(10*np.arange(w)/(w-1))
+            x = torch.tensor(5*np.arange(h)/(h-1)) ################################ MULTIPLY BY 10 IN POSITIONS 
+            y = torch.tensor(5*np.arange(w)/(w-1))
             grid_x, grid_y = torch.meshgrid(x, y, indexing='ij')
             grid_x = grid_x.repeat(len(image), 1, 1, 1)
             grid_y = grid_y.repeat(len(image), 1, 1, 1)

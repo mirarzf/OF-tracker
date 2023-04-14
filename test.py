@@ -17,6 +17,19 @@ from unet.unetutils.utils import plot_img_and_mask_and_gt
 import os
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
+# # REPRODUCIBILITY 
+# import random
+# def set_seed(seed: int = 42) -> None:
+#     np.random.seed(seed)
+#     random.seed(seed)
+#     torch.manual_seed(seed)
+#     torch.cuda.manual_seed(seed)
+#     # When running on the CuDNN backend, two further options must be set
+#     torch.backends.cudnn.deterministic = True
+#     torch.backends.cudnn.benchmark = False
+#     logging.info(f"Random seed set as {seed}. \n")
+# # END REPRODUCIBILLITY 
+
 # CHOOSE INPUT DIRECTORIES 
 ## RGB input 
 # imgdir = Path('D:\\Master Thesis\\data\\KU\\train')
@@ -93,8 +106,8 @@ def test_net(net,
         if addpositions: 
             # Add absolute positions to input 
             batchsize, _, w, h = image.shape
-            x = torch.tensor(5*np.arange(h)/(h-1)) ################################ MULTIPLY BY 10 IN POSITIONS 
-            y = torch.tensor(5*np.arange(w)/(w-1))
+            x = torch.tensor(np.arange(h)/(h-1)) ################################ MULTIPLY BY 10 IN POSITIONS 
+            y = torch.tensor(np.arange(w)/(w-1))
             grid_x, grid_y = torch.meshgrid(x, y, indexing='ij')
             grid_x = grid_x.repeat(len(image), 1, 1, 1)
             grid_y = grid_y.repeat(len(image), 1, 1, 1)
@@ -175,6 +188,7 @@ def get_args():
 if __name__ == '__main__':
     args = get_args()
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    # set_seed(0)
 
     useatt = True if args.input_att != None else False 
 

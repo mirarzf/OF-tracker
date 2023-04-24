@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader, random_split
 import albumentations as A
 from tqdm import tqdm
 
-from unet.unetutils.data_loading import AttentionDataset, BasicDataset
+from unet.unetutils.data_loading import MasterDataset, AttentionDataset, BasicDataset
 from unet.unetutils.dice_score import dice_loss
 from evaluate import evaluate
 from test import test_net
@@ -49,6 +49,8 @@ dir_mask = Path('./data/masks/')
 
 dir_attmap = Path('./data/attmaps/')
 
+dir_flo = Path('./data/flow/')
+
 ## FOR TESTING 
 dir_img_test = Path('./data/test/imgs/')
 dir_mask_test = Path('./data/test/masks')
@@ -68,6 +70,7 @@ def train_net(net,
               img_scale: float = 0.5,
               amp: bool = False, 
               useatt: bool = False, 
+              useflow: bool = False, 
               lossframesdecay: bool = False, 
               addpositions: bool = False, 
               foldnumber: int = 0):
@@ -136,12 +139,14 @@ def train_net(net,
     logging.info(f'''Validation dataset contains following ids: {val_ids}''')
 
     # 3. Create datasets
-    if useatt: 
-        train_set = AttentionDataset(images_dir=dir_img, masks_dir=dir_mask, file_ids=train_ids, scale=img_scale, attmaps_dir=dir_attmap, transform = dataaugtransform)
-        val_set = AttentionDataset(images_dir=dir_img, masks_dir=dir_mask, file_ids=val_ids, scale=img_scale, attmaps_dir=dir_attmap)
-    else: 
-        train_set = BasicDataset(images_dir=dir_img, masks_dir=dir_mask, file_ids=train_ids, scale=img_scale, transform = dataaugtransform)
-        val_set = BasicDataset(images_dir=dir_img, masks_dir=dir_mask, file_ids=val_ids, scale=img_scale)
+    # if useatt or useflow: 
+    #     train_set = MasterDataset(images_dir=dir_img, masks_dir=dir_mask, file_ids=train_ids, scale=img_scale, attmaps_dir=dir_attmap, transform = dataaugtransform)
+    #     val_set = MasterDataset(images_dir=dir_img, masks_dir=dir_mask, file_ids=val_ids, scale=img_scale, attmaps_dir=dir_attmap)
+    # else: 
+    #     train_set = BasicDataset(images_dir=dir_img, masks_dir=dir_mask, file_ids=train_ids, scale=img_scale, transform = dataaugtransform)
+    #     val_set = BasicDataset(images_dir=dir_img, masks_dir=dir_mask, file_ids=val_ids, scale=img_scale)
+    train_set = MasterDataset(images_dir=dir_img, masks_dir=dir_mask, file_ids=train_ids, scale=img_scale, transform=dataaugtransform, attmaps_dir=dir_attmap, withatt=useatt, flo_dir=dir_flo, withflo=useflow) 
+    val_set = MasterDataset(images_dir=dir_img, masks_dir=dir_mask, file_ids=val_ids, scale=img_scale, transform=dataaugtransform, attmaps_dir=dir_attmap, withatt=useatt, flo_dir=dir_flo, withflo=useflow) 
 
     print(len(val_set)) ############################ DEBUG PRINT 
 
@@ -162,6 +167,7 @@ def train_net(net,
         img_scale=img_scale, 
         amp=amp, 
         use_attention=useatt, 
+        use_opticalflow=useflow, 
         use_positions=addpositions, 
         augmented_data=(True if 'geometric' in dataaugtransform.keys() else False), 
         validation_size=n_val, 
@@ -170,6 +176,7 @@ def train_net(net,
 
     logging.info(f'''Starting training:
         Attention model: {useatt}
+        Optical Flow input: {useflow}
         Positions input: {addpositions}
         Epochs:          {epochs}
         Batch size:      {batch_size}
@@ -200,10 +207,13 @@ def train_net(net,
         with tqdm(total=n_train, desc=f'Epoch {epoch}/{epochs}', unit='img') as pbar:
             for batch in train_loader:
                 images = batch['image']
+                if useflow: 
+                    opticalflows = batch['flow']
+                    images = torch.cat((images, opticalflows), dim=1)
                 if addpositions: 
                     # Add normalized positions to input 
                     _, batchsize, w, h = images.shape
-                    x = torch.tensor(np.arange(h)/(h-1)) #################################################### MULTIPLICATION PAR 10 DE L'INPUT POSITION
+                    x = torch.tensor(np.arange(h)/(h-1)) 
                     y = torch.tensor(np.arange(w)/(w-1))
                     grid_x, grid_y = torch.meshgrid(x, y, indexing='ij')
                     grid_x = grid_x.repeat(len(images), 1, 1, 1)
@@ -357,6 +367,7 @@ def get_args():
     parser.add_argument('--framesdecay', action='store_true', default=False, help='Modify loss function to add the frames lack of importance')
     parser.add_argument('--saveall', action='store_true', default=False, help='Save checkpoint at each epoch')
     parser.add_argument('--nosavebest', action='store_true', default=False, help="Don't save checkpoint of best epoch")
+    parser.add_argument('--flow', action='store_true', default=False, help='Add optical flow to input')
     parser.add_argument('--wpos', action='store_true', default=False, help='Add normalized position to input')
     parser.add_argument('--test', action='store_true', default=False, help='Do the test after training')
     parser.add_argument('--viz', action='store_true', default=False, 
@@ -383,6 +394,8 @@ if __name__ == '__main__':
     n_channels = 3 
     if args.wpos: 
         n_channels += 2
+    if args.flow: 
+        n_channels += 2 
     if args.attention: 
         net = UNetAtt(n_channels=n_channels, n_classes=args.classes, bilinear=args.bilinear)
     else: 
@@ -413,6 +426,7 @@ if __name__ == '__main__':
             save_best_checkpoint=(not args.nosavebest),
             amp=args.amp, 
             useatt=args.attention, 
+            useflow=args.flow, 
             lossframesdecay=args.framesdecay, 
             addpositions=args.wpos, 
             foldnumber=args.foldnb)

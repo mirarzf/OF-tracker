@@ -144,7 +144,7 @@ class MasterDataset(Dataset):
         if self.withatt: 
             retdict['attmap'] = torch.as_tensor(attmap.copy()).long().contiguous()
         if self.withflo: 
-            retdict['flo'] = torch.as_tensor(flo.copy()).long().contiguous()
+            retdict['flow'] = torch.as_tensor(flo.copy()).long().contiguous()
         
         retdict['index'] = idx+1
         return retdict
@@ -152,10 +152,6 @@ class MasterDataset(Dataset):
 class BasicDataset(MasterDataset): 
     def __init__(self, images_dir: str, masks_dir: str, file_ids: list, scale: float = 1, mask_suffix: str = '', transform = dict()):
         super().__init__(images_dir, masks_dir, file_ids, scale, mask_suffix, transform, attmaps_dir='', withatt=False, flo_dir='', withflo=False)
-
-class AttentionDataset(MasterDataset): 
-    def __init__(self, images_dir: str, masks_dir: str, file_ids: list, scale: float = 1, mask_suffix: str = '', transform=None, attmaps_dir: str = '', withatt: bool = True, flo_dir: str = '', withflo: bool = False):
-        super().__init__(images_dir, masks_dir, file_ids, scale, mask_suffix, transform, attmaps_dir, withatt, flo_dir, withflo)
 
 class CarvanaDataset(BasicDataset):
     def __init__(self, images_dir, masks_dir, file_ids: list, scale=1, transform = dict()):

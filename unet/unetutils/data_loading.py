@@ -8,13 +8,15 @@ import torch
 from PIL import Image
 from torch.utils.data import Dataset
 
-class AttentionDataset(Dataset): 
-    def __init__(self, images_dir: str, masks_dir: str, file_ids: list, scale: float = 1.0, mask_suffix: str = '', transform = None, attmaps_dir: str = '', withatt: bool = True):
+class MasterDataset(Dataset): 
+    def __init__(self, images_dir: str, masks_dir: str, file_ids: list, scale: float = 1.0, mask_suffix: str = '', transform = None, attmaps_dir: str = '', withatt: bool = True, flo_dir: str = '', withflo: bool = True):
         self.withatt = withatt
+        self.withflo = withflo
 
         self.images_dir = Path(images_dir)
         self.masks_dir = Path(masks_dir)
         self.attmaps_dir = Path(attmaps_dir)
+        self.flo_dir = Path(flo_dir)
         assert 0 < scale <= 1, 'Scale must be between 0 and 1'
         self.scale = scale
         self.mask_suffix = mask_suffix
@@ -70,7 +72,8 @@ class AttentionDataset(Dataset):
     def load(filename):
         ext = splitext(filename)[1]
         if ext == '.npy':
-            return Image.fromarray(np.load(filename))
+            # return Image.fromarray(np.load(filename))
+            return np.load(filename)
         elif ext in ['.pt', '.pth']:
             return Image.fromarray(torch.load(filename).numpy())
         else:
@@ -85,17 +88,23 @@ class AttentionDataset(Dataset):
         img_file = list(self.images_dir.glob(name + '.*'))
         if self.withatt: 
             attmap_file = list(self.attmaps_dir.glob(name + '.*'))
+        if self.withflo: 
+            flo_file = list(self.flo_dir.glob(name + '.*'))
         
         assert len(img_file) == 1, f'Either no image or multiple images found for the ID {name}: {img_file}'
         assert len(mask_file) == 1, f'Either no mask or multiple masks found for the ID {name}: {mask_file}.'
         if self.withatt: 
             assert len(attmap_file) == 1, f'Either no attention map or multiple attention maps found for the ID {name}: {attmap_file}.'
+        if self.withflo: 
+            assert len(flo_file) == 1, f'Either no optical flow file or multiple attention optical flow files for the ID {name}: {flo_file}.'
         
         # Load the images 
         mask = self.load(mask_file[0])
         img = self.load(img_file[0])
         if self.withatt: 
             attmap = self.load(attmap_file[0])
+        if self.withflo: 
+            flo = self.load(flo_file[0])
 
         # if self.withatt: 
         #     assert img.size == mask.size and img.size == attmap.size, \
@@ -106,11 +115,16 @@ class AttentionDataset(Dataset):
         
         # Apply data augmentation 
         if self.geotransform != None: 
-            if not self.withatt: 
-                transformed = self.geotransform(image=np.asarray(img), mask=np.asarray(mask))
-            else: # self.withatt == True We use attention 
+            if self.withatt and self.withflo: 
+                transformed = self.geotransform(image=np.asarray(img), mask=np.asarray(mask), attmap=np.asarray(attmap), flo=flo)
+                attmap = Image.fromarray(transformed['attmap'])
+            elif self.withatt and not self.withflo: 
                 transformed = self.geotransform(image=np.asarray(img), mask=np.asarray(mask), attmap=np.asarray(attmap))
                 attmap = Image.fromarray(transformed['attmap'])
+            elif not self.withatt and self.withflo: 
+                transformed = self.geotransform(image=np.asarray(img), mask=np.asarray(mask), flo=flo)
+            else: # No attention and no optical flow input 
+                transformed = self.geotransform(image=np.asarray(img), mask=np.asarray(mask))
             img = Image.fromarray(transformed['image'])
             mask = Image.fromarray(transformed['mask'])
         
@@ -129,54 +143,59 @@ class AttentionDataset(Dataset):
         retdict['mask'] = torch.as_tensor(mask.copy()).long().contiguous()
         if self.withatt: 
             retdict['attmap'] = torch.as_tensor(attmap.copy()).long().contiguous()
+        if self.withflo: 
+            retdict['flo'] = torch.as_tensor(flo.copy()).long().contiguous()
         
         retdict['index'] = idx+1
         return retdict
 
-class BasicDataset(AttentionDataset): 
-    def __init__(self, images_dir: str, masks_dir: str, file_ids: list, scale: float = 1, mask_suffix: str = '', transform = dict(), attmaps_dir: str = '', withatt: bool = True):
-        super().__init__(images_dir, masks_dir, file_ids, scale, mask_suffix, transform, attmaps_dir, withatt=False)
+class BasicDataset(MasterDataset): 
+    def __init__(self, images_dir: str, masks_dir: str, file_ids: list, scale: float = 1, mask_suffix: str = '', transform = dict()):
+        super().__init__(images_dir, masks_dir, file_ids, scale, mask_suffix, transform, attmaps_dir='', withatt=False, flo_dir='', withflo=False)
 
+class AttentionDataset(MasterDataset): 
+    def __init__(self, images_dir: str, masks_dir: str, file_ids: list, scale: float = 1, mask_suffix: str = '', transform=None, attmaps_dir: str = '', withatt: bool = True, flo_dir: str = '', withflo: bool = False):
+        super().__init__(images_dir, masks_dir, file_ids, scale, mask_suffix, transform, attmaps_dir, withatt, flo_dir, withflo)
 
 class CarvanaDataset(BasicDataset):
     def __init__(self, images_dir, masks_dir, file_ids: list, scale=1, transform = dict()):
         super().__init__(images_dir, masks_dir, file_ids, scale, mask_suffix='_mask', transform=transform)
 
-class MaskDataset(AttentionDataset): 
-    def __init__(self, images_dir: str, masks_dir: str, file_ids: list, scale: float = 1, mask_suffix: str = '', transform = dict(), attmaps_dir: str = '', withatt: bool = True):
-        super().__init__(images_dir, masks_dir, file_ids, scale, mask_suffix, transform, attmaps_dir, withatt)
+# class MaskDataset(AttentionDataset): 
+#     def __init__(self, images_dir: str, masks_dir: str, file_ids: list, scale: float = 1, mask_suffix: str = '', transform = dict(), attmaps_dir: str = '', withatt: bool = True):
+#         super().__init__(images_dir, masks_dir, file_ids, scale, mask_suffix, transform, attmaps_dir, withatt)
 
-    def __getitem__(self, idx):
-        name = self.ids[idx]
-        mask_file = list(self.masks_dir.glob(name + self.mask_suffix + '.*'))
-        img_file = list(self.images_dir.glob(name + '.*'))
-        if self.withatt: 
-            attmap_file = list(self.attmaps_dir.glob(name + '.*'))
+#     def __getitem__(self, idx):
+#         name = self.ids[idx]
+#         mask_file = list(self.masks_dir.glob(name + self.mask_suffix + '.*'))
+#         img_file = list(self.images_dir.glob(name + '.*'))
+#         if self.withatt: 
+#             attmap_file = list(self.attmaps_dir.glob(name + '.*'))
         
-        assert len(img_file) == 1, f'Either no image or multiple images found for the ID {name}: {img_file}'
-        assert len(mask_file) == 1, f'Either no mask or multiple masks found for the ID {name}: {mask_file}.'
-        if self.withatt: 
-            assert len(attmap_file) == 1, f'Either no attention map or multiple attention maps found for the ID {name}: {attmap_file}.'
+#         assert len(img_file) == 1, f'Either no image or multiple images found for the ID {name}: {img_file}'
+#         assert len(mask_file) == 1, f'Either no mask or multiple masks found for the ID {name}: {mask_file}.'
+#         if self.withatt: 
+#             assert len(attmap_file) == 1, f'Either no attention map or multiple attention maps found for the ID {name}: {attmap_file}.'
         
-        mask = self.load(mask_file[0])
-        img = self.load(img_file[0])
-        if self.withatt: 
-            attmap = self.load(attmap_file[0])
+#         mask = self.load(mask_file[0])
+#         img = self.load(img_file[0])
+#         if self.withatt: 
+#             attmap = self.load(attmap_file[0])
 
-        img = self.preprocess(img, self.scale, is_mask=False)
-        mask = self.preprocess(mask, self.scale, is_mask=True)
-        if self.withatt: 
-            attmap = self.preprocess(attmap, self.scale, is_mask=True)
+#         img = self.preprocess(img, self.scale, is_mask=False)
+#         mask = self.preprocess(mask, self.scale, is_mask=True)
+#         if self.withatt: 
+#             attmap = self.preprocess(attmap, self.scale, is_mask=True)
         
-        retdict = {}
-        retdict['image'] = torch.as_tensor(img.copy()).float().contiguous()
-        if self.transform: 
-            retdict['image'] = self.transform(retdict['image'])
-        retdict['mask'] = torch.as_tensor(mask.copy()).long().contiguous()
-        if self.withatt: 
-            retdict['attmap'] = torch.as_tensor(attmap.copy()).float().contiguous()
+#         retdict = {}
+#         retdict['image'] = torch.as_tensor(img.copy()).float().contiguous()
+#         if self.transform: 
+#             retdict['image'] = self.transform(retdict['image'])
+#         retdict['mask'] = torch.as_tensor(mask.copy()).long().contiguous()
+#         if self.withatt: 
+#             retdict['attmap'] = torch.as_tensor(attmap.copy()).float().contiguous()
         
-        retdict['index'] = idx+1
-        retdict['filename'] = name
+#         retdict['index'] = idx+1
+#         retdict['filename'] = name
 
-        return retdict
+#         return retdict

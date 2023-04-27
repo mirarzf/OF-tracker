@@ -48,8 +48,8 @@ attmapdir = None # None when you don't want attention maps
 # attmapdir = Path("./data/test/attmaps")
 
 ## Optical Flow input 
-flowdir = None # None when you don't want optical flow 
-# flowdir = Path("./data/test/opticalflow")
+# flowdir = None # None when you don't want optical flow 
+flowdir = Path("./data/test/flows")
 
 ## Folder where to save the predicted segmentation masks 
 outdir = Path("./results/unet")
@@ -179,7 +179,7 @@ def get_args():
                         help='Specify the file in which the model is stored')
     parser.add_argument('--input', '-i', metavar='INPUT', default=imgdir, help='Directory of input images')
     parser.add_argument('--input_att', '-a', metavar='INPUT ATTENTION', default=attmapdir, help='Directory of input attention maps')
-    parser.add_argument('--input_flow', '-of', metavar='INPUT OPTICAL FLOW', default=attmapdir, help='Directory of input optical flows')
+    parser.add_argument('--input_flow', '-of', metavar='INPUT OPTICAL FLOW', default=flowdir, help='Directory of input optical flows')
     parser.add_argument('--ground_truth', '-gt', metavar='GROUND TRUTH', default=gtdir, help='Directory of ground truth masks')
     parser.add_argument('--output', '-o', metavar='OUTPUT', default=outdir, help='Directory for output images')
     parser.add_argument('--viz', '-v', action='store_true', default=False, 

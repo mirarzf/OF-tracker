@@ -55,6 +55,7 @@ dir_flo = Path('./data/flows/')
 dir_img_test = Path('./data/test/imgs/')
 dir_mask_test = Path('./data/test/masks')
 dir_attmap_test = Path('./data/test/attmaps')
+dir_flow_test = Path('./data/test/flows')
 
 ## PARENT FOLDER OF CHECKPOINTS 
 dir_checkpoint = Path('./checkpoints')
@@ -156,7 +157,7 @@ def train_net(net,
     val_loader = DataLoader(val_set, shuffle=False, batch_size=batch_size, **loader_args)
 
     # (Initialize logging)
-    project_name = "OF-Tracker"
+    project_name = "OF-Tracker-TBDeleted"
     experiment = wandb.init(project=project_name, resume='allow', anonymous='must')
     experiment.config.update(dict(
         epochs=epochs, 
@@ -208,6 +209,7 @@ def train_net(net,
             for batch in train_loader:
                 images = batch['image']
                 if useflow: 
+                    # Add optical flow to input 
                     opticalflows = batch['flow']
                     images = torch.cat((images, opticalflows), dim=1)
                 if addpositions: 
@@ -285,7 +287,7 @@ def train_net(net,
                 if not torch.isinf(value.grad).any():
                     histograms['Gradients/' + tag] = wandb.Histogram(value.grad.data.cpu())
 
-            val_score = evaluate(net, val_loader, device, useatt=useatt, addpos=addpositions)
+            val_score = evaluate(net, val_loader, device, useatt=useatt, addpos=addpositions, addflow=useflow)
             # scheduler.step(val_score)
             net.train()
 
@@ -311,10 +313,12 @@ def train_net(net,
         
         if save_checkpoint or save_best_checkpoint:
             adddirckp = 'U-Net-' + str(net.n_channels)
-            if useatt: 
-                adddirckp += '-w-attention' 
+            if useflow: 
+                adddirckp += '-w-flow'
             if addpositions: 
                 adddirckp += '-w-positions'
+            if useatt: 
+                adddirckp += '-w-attention' 
             dirckp = dir_checkpoint / adddirckp
             dirckp.mkdir(parents=True, exist_ok=True)
 
@@ -455,6 +459,7 @@ if __name__ == '__main__':
         images_dir=dir_img_test, 
         masks_dir=dir_mask_test, 
         attmaps_dir=dir_attmap_test, 
+        flows_dir=dir_flow_test, 
         img_scale=args.scale,
         mask_threshold=0.5, 
         useatt=args.attention, 

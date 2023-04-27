@@ -72,6 +72,7 @@ def test_net(net,
               images_dir, 
               masks_dir, 
               attmaps_dir, 
+              flows_dir, 
               img_scale: float = 1.0,
               mask_threshold: float = 0.5, 
               useatt: bool = False, 
@@ -81,8 +82,8 @@ def test_net(net,
               visualize: bool = False):
     # 1. Create dataset
     ids = [file.stem for file in images_dir.iterdir() if file.is_file() and file.name != '.gitkeep']
-    attmapdirForTest = '' if attmapdir == None else attmapdir
-    flowdirForTest = '' if flowdir == None else flowdir
+    attmapdirForTest = '' if attmaps_dir == None else attmaps_dir
+    flowdirForTest = '' if flows_dir == None else flows_dir
     test_set = MasterDataset(images_dir=images_dir, masks_dir=masks_dir, file_ids=ids, scale=img_scale, attmaps_dir=attmapdirForTest, withatt=useatt, flo_dir=flowdirForTest, withflo=useflow) 
 
     # 2. Create data loader 
@@ -121,12 +122,9 @@ def test_net(net,
             grid_x = grid_x.repeat(len(image), 1, 1, 1)
             grid_y = grid_y.repeat(len(image), 1, 1, 1)
             image = torch.cat((image, grid_x, grid_y), dim=1)
-
-        # add attention map input if toggled on 
+        
         if useatt: 
             attmap = batch['attmap']
-            attmap = attmap.to(device=device, dtype=torch.float32)
-            
         # move images and labels to correct device and type
         image = image.to(device=device, dtype=torch.float32)
         mask_true = mask_true.to(device=device, dtype=torch.long)
@@ -233,6 +231,7 @@ if __name__ == '__main__':
         images_dir=imgdir, 
         masks_dir=gtdir, 
         attmaps_dir=attmapdir, 
+        flows_dir=flowdir, 
         img_scale=args.scale,
         mask_threshold=args.mask_threshold, 
         useatt=useatt, 

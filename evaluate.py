@@ -20,7 +20,7 @@ from unet.unetutils.dice_score import multiclass_dice_coeff, dice_coeff
 # set_seed(0)
 # # END REPRODUCIBILLITY 
 
-def evaluate(net, dataloader, device, useatt=False, addpos=False):
+def evaluate(net, dataloader, device, useatt=False, addpos=False, addflow=False):
     net.eval()
     num_val_batches = len(dataloader)
     dice_score = 0
@@ -28,6 +28,10 @@ def evaluate(net, dataloader, device, useatt=False, addpos=False):
     # iterate over the validation set
     for batch in tqdm(dataloader, total=num_val_batches, desc='Validation round', unit='batch', leave=False):
         image, mask_true = batch['image'], batch['mask']
+        if addflow: 
+            # Add optical flow to input 
+            opticalflow = batch['flow']
+            image = torch.cat((image, opticalflow), dim=1)
         if addpos: 
             # Add absolute positions to input 
             batchsize, _, w, h = image.shape

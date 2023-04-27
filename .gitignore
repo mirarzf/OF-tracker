@@ -12,6 +12,7 @@ checkpoints/
 *.jpg
 *.png
 *.mp4
+*.npy 
 
 venv/
 

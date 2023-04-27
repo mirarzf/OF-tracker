@@ -144,7 +144,14 @@ class MasterDataset(Dataset):
         if self.withatt: 
             retdict['attmap'] = torch.as_tensor(attmap.copy()).long().contiguous()
         if self.withflo: 
-            retdict['flow'] = torch.as_tensor(flo.copy()).long().contiguous()
+            flo = flo.transpose((2, 0, 1)) # Transpose dimensions of optical flow array so that they become (2, width, height) 
+            flo_tensor = torch.as_tensor(flo.copy()).float().contiguous() # Transform into a tensor beforeapplying interpolation to change input size 
+            # Then change the size of your tensor before adding it to the input dictionary 
+            flo_tensor = flo_tensor.unsqueeze(0) 
+            flo_tensor = torch.nn.functional.interpolate(input=flo_tensor, size=(300,300), mode='bicubic', align_corners=True)
+            flo_tensor = flo_tensor.squeeze()
+            # Add optical flow tensor to return dictionary 
+            retdict['flow'] = flo_tensor
         
         retdict['index'] = idx+1
         return retdict

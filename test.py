@@ -78,13 +78,14 @@ def test_net(net,
               useatt: bool = False, 
               useflow: bool = False, 
               addpositions: bool = False, 
+              rgbtogs: bool = False, 
               savepred: bool = True, 
               visualize: bool = False):
     # 1. Create dataset
     ids = [file.stem for file in images_dir.iterdir() if file.is_file() and file.name != '.gitkeep']
     attmapdirForTest = '' if attmaps_dir == None else attmaps_dir
     flowdirForTest = '' if flows_dir == None else flows_dir
-    test_set = MasterDataset(images_dir=images_dir, masks_dir=masks_dir, file_ids=ids, scale=img_scale, attmaps_dir=attmapdirForTest, withatt=useatt, flo_dir=flowdirForTest, withflo=useflow) 
+    test_set = MasterDataset(images_dir=images_dir, masks_dir=masks_dir, file_ids=ids, scale=img_scale, attmaps_dir=attmapdirForTest, withatt=useatt, flo_dir=flowdirForTest, withflo=useflow, grayscale=rgbtogs) 
 
     # 2. Create data loader 
     loader_args = dict(num_workers=4, pin_memory=True)
@@ -189,7 +190,8 @@ def get_args():
                         help='Scale factor for the input images')
     parser.add_argument('--bilinear', action='store_true', default=False, help='Use bilinear upsampling')
     parser.add_argument('--classes', '-c', type=int, default=2, help='Number of classes')
-    parser.add_argument('--wpos', action='store_true', default=False, help='Add normalized position to input')
+    parser.add_argument('--pos', action='store_true', default=False, help='Add normalized position to input')
+    parser.add_argument('--greyscale', '-gs', action='store_true', default=False, help='Convert RGB image to Greyscale for input')
 
     return parser.parse_args()
 
@@ -202,7 +204,7 @@ if __name__ == '__main__':
     useflow = True if args.input_flow != None else False 
 
     n_channels = 3 
-    if args.wpos: 
+    if args.pos: 
         n_channels += 2 
     if useflow: 
         n_channels += 2 
@@ -236,7 +238,8 @@ if __name__ == '__main__':
         mask_threshold=args.mask_threshold, 
         useatt=useatt, 
         useflow=useflow, 
-        addpositions=args.wpos, 
+        addpositions=args.pos, 
+        rgbtogs=args.grayscale, 
         savepred=savepred, 
         visualize=args.viz)
         

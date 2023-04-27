@@ -9,9 +9,11 @@ from PIL import Image
 from torch.utils.data import Dataset
 
 class MasterDataset(Dataset): 
-    def __init__(self, images_dir: str, masks_dir: str, file_ids: list, scale: float = 1.0, mask_suffix: str = '', transform = None, attmaps_dir: str = '', withatt: bool = True, flo_dir: str = '', withflo: bool = True):
+    def __init__(self, images_dir: str, masks_dir: str, file_ids: list, scale: float = 1.0, mask_suffix: str = '', transform = None, attmaps_dir: str = '', withatt: bool = True, flo_dir: str = '', withflo: bool = True, grayscale=False):
         self.withatt = withatt
         self.withflo = withflo
+
+        self.grayscale = grayscale
 
         self.images_dir = Path(images_dir)
         self.masks_dir = Path(masks_dir)
@@ -99,8 +101,11 @@ class MasterDataset(Dataset):
             assert len(flo_file) == 1, f'Either no optical flow file or multiple attention optical flow files for the ID {name}: {flo_file}.'
         
         # Load the images 
-        mask = self.load(mask_file[0])
         img = self.load(img_file[0])
+        # If grayscale on, convert img 
+        if self.grayscale: 
+            img = img.convert('L')
+        mask = self.load(mask_file[0])
         if self.withatt: 
             attmap = self.load(attmap_file[0])
         if self.withflo: 
@@ -157,48 +162,9 @@ class MasterDataset(Dataset):
         return retdict
 
 class BasicDataset(MasterDataset): 
-    def __init__(self, images_dir: str, masks_dir: str, file_ids: list, scale: float = 1, mask_suffix: str = '', transform = dict()):
-        super().__init__(images_dir, masks_dir, file_ids, scale, mask_suffix, transform, attmaps_dir='', withatt=False, flo_dir='', withflo=False)
+    def __init__(self, images_dir: str, masks_dir: str, file_ids: list, scale: float = 1, mask_suffix: str = '', transform = dict(), grayscale=False):
+        super().__init__(images_dir, masks_dir, file_ids, scale, mask_suffix, transform, attmaps_dir='', withatt=False, flo_dir='', withflo=False, grayscale=False)
 
 class CarvanaDataset(BasicDataset):
     def __init__(self, images_dir, masks_dir, file_ids: list, scale=1, transform = dict()):
         super().__init__(images_dir, masks_dir, file_ids, scale, mask_suffix='_mask', transform=transform)
-
-# class MaskDataset(AttentionDataset): 
-#     def __init__(self, images_dir: str, masks_dir: str, file_ids: list, scale: float = 1, mask_suffix: str = '', transform = dict(), attmaps_dir: str = '', withatt: bool = True):
-#         super().__init__(images_dir, masks_dir, file_ids, scale, mask_suffix, transform, attmaps_dir, withatt)
-
-#     def __getitem__(self, idx):
-#         name = self.ids[idx]
-#         mask_file = list(self.masks_dir.glob(name + self.mask_suffix + '.*'))
-#         img_file = list(self.images_dir.glob(name + '.*'))
-#         if self.withatt: 
-#             attmap_file = list(self.attmaps_dir.glob(name + '.*'))
-        
-#         assert len(img_file) == 1, f'Either no image or multiple images found for the ID {name}: {img_file}'
-#         assert len(mask_file) == 1, f'Either no mask or multiple masks found for the ID {name}: {mask_file}.'
-#         if self.withatt: 
-#             assert len(attmap_file) == 1, f'Either no attention map or multiple attention maps found for the ID {name}: {attmap_file}.'
-        
-#         mask = self.load(mask_file[0])
-#         img = self.load(img_file[0])
-#         if self.withatt: 
-#             attmap = self.load(attmap_file[0])
-
-#         img = self.preprocess(img, self.scale, is_mask=False)
-#         mask = self.preprocess(mask, self.scale, is_mask=True)
-#         if self.withatt: 
-#             attmap = self.preprocess(attmap, self.scale, is_mask=True)
-        
-#         retdict = {}
-#         retdict['image'] = torch.as_tensor(img.copy()).float().contiguous()
-#         if self.transform: 
-#             retdict['image'] = self.transform(retdict['image'])
-#         retdict['mask'] = torch.as_tensor(mask.copy()).long().contiguous()
-#         if self.withatt: 
-#             retdict['attmap'] = torch.as_tensor(attmap.copy()).float().contiguous()
-        
-#         retdict['index'] = idx+1
-#         retdict['filename'] = name
-
-#         return retdict

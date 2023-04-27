@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader, random_split
 import albumentations as A
 from tqdm import tqdm
 
-from unet.unetutils.data_loading import MasterDataset, BasicDataset
+from unet.unetutils.data_loading import MasterDataset
 from unet.unetutils.dice_score import dice_loss
 from evaluate import evaluate
 from test import test_net
@@ -71,9 +71,10 @@ def train_net(net,
               img_scale: float = 0.5,
               amp: bool = False, 
               useatt: bool = False, 
-              useflow: bool = False, 
+              useflow: bool = False,
               lossframesdecay: bool = False, 
               addpositions: bool = False, 
+              rgbtogs: bool = False, 
               foldnumber: int = 0):
     
     # 1. Choose data augmentation transforms (using albumentations) 
@@ -140,14 +141,8 @@ def train_net(net,
     logging.info(f'''Validation dataset contains following ids: {val_ids}''')
 
     # 3. Create datasets
-    # if useatt or useflow: 
-    #     train_set = MasterDataset(images_dir=dir_img, masks_dir=dir_mask, file_ids=train_ids, scale=img_scale, attmaps_dir=dir_attmap, transform = dataaugtransform)
-    #     val_set = MasterDataset(images_dir=dir_img, masks_dir=dir_mask, file_ids=val_ids, scale=img_scale, attmaps_dir=dir_attmap)
-    # else: 
-    #     train_set = BasicDataset(images_dir=dir_img, masks_dir=dir_mask, file_ids=train_ids, scale=img_scale, transform = dataaugtransform)
-    #     val_set = BasicDataset(images_dir=dir_img, masks_dir=dir_mask, file_ids=val_ids, scale=img_scale)
-    train_set = MasterDataset(images_dir=dir_img, masks_dir=dir_mask, file_ids=train_ids, scale=img_scale, transform=dataaugtransform, attmaps_dir=dir_attmap, withatt=useatt, flo_dir=dir_flo, withflo=useflow) 
-    val_set = MasterDataset(images_dir=dir_img, masks_dir=dir_mask, file_ids=val_ids, scale=img_scale, transform=dataaugtransform, attmaps_dir=dir_attmap, withatt=useatt, flo_dir=dir_flo, withflo=useflow) 
+    train_set = MasterDataset(images_dir=dir_img, masks_dir=dir_mask, file_ids=train_ids, scale=img_scale, transform=dataaugtransform, attmaps_dir=dir_attmap, withatt=useatt, flo_dir=dir_flo, withflo=useflow, grayscale=rgbtogs) 
+    val_set = MasterDataset(images_dir=dir_img, masks_dir=dir_mask, file_ids=val_ids, scale=img_scale, transform=dataaugtransform, attmaps_dir=dir_attmap, withatt=useatt, flo_dir=dir_flo, withflo=useflow, grayscale=rgbtogs) 
 
     print(len(val_set)) ############################ DEBUG PRINT 
 
@@ -372,7 +367,8 @@ def get_args():
     parser.add_argument('--saveall', action='store_true', default=False, help='Save checkpoint at each epoch')
     parser.add_argument('--nosavebest', action='store_true', default=False, help="Don't save checkpoint of best epoch")
     parser.add_argument('--flow', action='store_true', default=False, help='Add optical flow to input')
-    parser.add_argument('--wpos', action='store_true', default=False, help='Add normalized position to input')
+    parser.add_argument('--pos', action='store_true', default=False, help='Add normalized position to input')
+    parser.add_argument('--greyscale', '-gs', action='store_true', default=False, help='Convert RGB image to Greyscale for input')
     parser.add_argument('--test', action='store_true', default=False, help='Do the test after training')
     parser.add_argument('--viz', action='store_true', default=False, 
                         help='Visualize the images as they are processed')
@@ -396,7 +392,7 @@ if __name__ == '__main__':
     # n_classes is the number of probabilities you want to get per pixel
     # if the model with attention is used, a different model will be loaded 
     n_channels = 3 
-    if args.wpos: 
+    if args.pos: 
         n_channels += 2
     if args.flow: 
         n_channels += 2 
@@ -432,7 +428,8 @@ if __name__ == '__main__':
             useatt=args.attention, 
             useflow=args.flow, 
             lossframesdecay=args.framesdecay, 
-            addpositions=args.wpos, 
+            addpositions=args.pos, 
+            rgbtogs=args.grayscale, 
             foldnumber=args.foldnb)
         logging.info(f'Best model is found at checkpoint #{best_ckpt}.')
     except KeyboardInterrupt:
@@ -464,7 +461,8 @@ if __name__ == '__main__':
         mask_threshold=0.5, 
         useatt=args.attention, 
         useflow=args.flow, 
-        addpositions=args.wpos, 
+        addpositions=args.pos, 
+        rgbtogs=args.grayscale, 
         savepred=False, 
         visualize=args.viz)
         logging.info(f'DICE score of testing dataset is: {test_DICE}')

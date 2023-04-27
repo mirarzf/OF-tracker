@@ -155,7 +155,7 @@ def train_net(net,
     val_loader = DataLoader(val_set, shuffle=False, batch_size=batch_size, **loader_args)
 
     # (Initialize logging)
-    project_name = "OF-Tracker-TBDeleted"
+    project_name = "OF-Tracker-final"
     experiment = wandb.init(project=project_name, resume='allow', anonymous='must')
     experiment.config.update(dict(
         epochs=epochs, 
@@ -310,11 +310,7 @@ def train_net(net,
             epochlog = {
                 'learning rate': optimizer.param_groups[0]['lr'],
                 'validation Dice': val_score,
-                # 'images': wandb.Image(images[0,:lastimgchannel].cpu()),
-                # 'masks': {
-                #     'true': wandb.Image(true_masks[0].float().cpu()),
-                #     'pred': wandb.Image(masks_pred.argmax(dim=1)[0].float().cpu()),
-                # },
+                'images': wandb.Image(images[0,:lastimgchannel].cpu()),
                 'cross entropy': wandb.Image(debug_loss[0].float().cpu()), 
                 'step': global_step,
                 'epoch': epoch,
@@ -376,7 +372,7 @@ def get_args():
     parser = argparse.ArgumentParser(description='Train the UNet on images and target masks')
     parser.add_argument('--epochs', '-e', metavar='E', type=int, default=5, help='Number of epochs')
     parser.add_argument('--batch-size', '-b', dest='batch_size', metavar='B', type=int, default=1, help='Batch size')
-    parser.add_argument('--learning-rate', '-l', metavar='LR', type=float, default=1e-5,
+    parser.add_argument('--learning-rate', '-lr', metavar='LR', type=float, default=1e-5,
                         help='Learning rate', dest='lr')
     parser.add_argument('--load', '-f', type=str, default=False, help='Load model from a .pth file')
     parser.add_argument('--scale', '-s', type=float, default=1.0, help='Downscaling factor of the images')

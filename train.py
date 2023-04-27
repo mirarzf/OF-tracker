@@ -184,6 +184,10 @@ def train_net(net,
         Images scaling:  {img_scale}
         Mixed Precision: {amp}
     ''')
+    # For image logging for wandb 
+    lastimgchannel = 3
+    if rgbtogs: 
+        lastimgchannel = 1
 
     # 5. Set up the optimizer, the loss, the learning rate scheduler and the loss scaling for AMP
     # optimizer = optim.RMSprop(net.parameters(), lr=learning_rate, weight_decay=1e-2, momentum=0.9) # VANILLA SETTINGS: net.parameters(), lr=learning_rate, weight_decay=1e-8, momentum=0.9
@@ -290,7 +294,7 @@ def train_net(net,
             experiment.log({
                 'learning rate': optimizer.param_groups[0]['lr'],
                 'validation Dice': val_score,
-                'images': wandb.Image(images[0,:3].cpu()),
+                'images': wandb.Image(images[0,:lastimgchannel].cpu()),
                 'masks': {
                     'true': wandb.Image(true_masks[0].float().cpu()),
                     'pred': wandb.Image(masks_pred.argmax(dim=1)[0].float().cpu()),

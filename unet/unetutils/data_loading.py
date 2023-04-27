@@ -123,11 +123,13 @@ class MasterDataset(Dataset):
             if self.withatt and self.withflo: 
                 transformed = self.geotransform(image=np.asarray(img), mask=np.asarray(mask), attmap=np.asarray(attmap), flo=flo)
                 attmap = Image.fromarray(transformed['attmap'])
+                flo = transformed['flo']
             elif self.withatt and not self.withflo: 
                 transformed = self.geotransform(image=np.asarray(img), mask=np.asarray(mask), attmap=np.asarray(attmap))
                 attmap = Image.fromarray(transformed['attmap'])
             elif not self.withatt and self.withflo: 
                 transformed = self.geotransform(image=np.asarray(img), mask=np.asarray(mask), flo=flo)
+                flo = transformed['flo']
             else: # No attention and no optical flow input 
                 transformed = self.geotransform(image=np.asarray(img), mask=np.asarray(mask))
             img = Image.fromarray(transformed['image'])

@@ -188,6 +188,19 @@ def train_net(net,
     lastimgchannel = 3
     if rgbtogs: 
         lastimgchannel = 1
+    # For checkpoint saving 
+    if save_checkpoint or save_best_checkpoint:
+        adddirckp = 'U-Net-' + str(net.n_channels)
+        if rgbtogs: 
+            adddirckp += '-grayscale'
+        if useflow: 
+            adddirckp += '-w-flow'
+        if addpositions: 
+            adddirckp += '-w-positions'
+        if useatt: 
+            adddirckp += '-w-attention' 
+        dirckp = dir_checkpoint / adddirckp
+        dirckp.mkdir(parents=True, exist_ok=True)
 
     # 5. Set up the optimizer, the loss, the learning rate scheduler and the loss scaling for AMP
     # optimizer = optim.RMSprop(net.parameters(), lr=learning_rate, weight_decay=1e-2, momentum=0.9) # VANILLA SETTINGS: net.parameters(), lr=learning_rate, weight_decay=1e-8, momentum=0.9
@@ -309,21 +322,6 @@ def train_net(net,
         scheduler.step() # Change learning rate 
 
         # 7. (Optional) Save checkpoint at each epoch 
-        
-        if save_checkpoint or save_best_checkpoint:
-            adddirckp = 'U-Net-' + str(net.n_channels)
-            if rgbtogs: 
-                adddirckp += '-grayscale'
-            if useflow: 
-                adddirckp += '-w-flow'
-            if addpositions: 
-                adddirckp += '-w-positions'
-            if useatt: 
-                adddirckp += '-w-attention' 
-            dirckp = dir_checkpoint / adddirckp
-            dirckp.mkdir(parents=True, exist_ok=True)
-
-
         if save_checkpoint:            
             torch.save(net.state_dict(), str(dirckp / 'checkpoint_epoch{}.pth'.format(epoch)))
             logging.info(f'Checkpoint {epoch} saved!')

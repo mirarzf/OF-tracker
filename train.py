@@ -60,6 +60,9 @@ dir_flow_test = Path('./data/test/flows')
 ## PARENT FOLDER OF CHECKPOINTS 
 dir_checkpoint = Path('./checkpoints')
 
+## FOR WANDB LOGGING 
+class_labels = {0: 'background', 1: 'hands'}
+
 def train_net(net,
               device,
               epochs: int = 5,
@@ -81,7 +84,7 @@ def train_net(net,
     geotransform = A.Compose([ 
         A.HorizontalFlip(p=0.5)
     ], 
-    additional_targets={'attmap':'mask'})
+    additional_targets={'attmap':'mask', 'flox':'mask', 'floy':'mask'})
     colortransform = A.Compose([ 
         A.RandomBrightnessContrast(p=0.5)
     ])
@@ -304,19 +307,35 @@ def train_net(net,
             net.train()
 
             logging.info('Validation Dice score: {}'.format(val_score))
-            experiment.log({
+            epochlog = {
                 'learning rate': optimizer.param_groups[0]['lr'],
                 'validation Dice': val_score,
-                'images': wandb.Image(images[0,:lastimgchannel].cpu()),
-                'masks': {
-                    'true': wandb.Image(true_masks[0].float().cpu()),
-                    'pred': wandb.Image(masks_pred.argmax(dim=1)[0].float().cpu()),
-                },
+                # 'images': wandb.Image(images[0,:lastimgchannel].cpu()),
+                # 'masks': {
+                #     'true': wandb.Image(true_masks[0].float().cpu()),
+                #     'pred': wandb.Image(masks_pred.argmax(dim=1)[0].float().cpu()),
+                # },
                 'cross entropy': wandb.Image(debug_loss[0].float().cpu()), 
                 'step': global_step,
                 'epoch': epoch,
                 **histograms
-            })
+            } 
+            epochlog['masks'] = wandb.Image(images[0,:lastimgchannel], 
+                                             masks = { 
+                                                 'true': {
+                                                     "mask_data": true_masks[0].float().cpu().numpy(), 
+                                                     "class_labels": class_labels
+                                                 }, 
+                                                 'pred': { 
+                                                    "mask_data": masks_pred.argmax(dim=1)[0].float().cpu().numpy(), 
+                                                    "class_labels": class_labels
+                                                 }
+                                             })
+            if useflow: 
+                ofimage = images[0,lastimgchannel:lastimgchannel+2].float().cpu()
+                ofimage = np.concatenate((ofimage, np.ones((1, ofimage.shape[1], ofimage.shape[2]))), axis=0)
+                epochlog['optical flow'] = wandb.Image(ofimage.transpose((1,2,0)), mode="RGB")
+            experiment.log(epochlog)
             
         epoch_loss /= len(train_loader)
         scheduler.step() # Change learning rate 

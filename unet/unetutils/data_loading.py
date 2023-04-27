@@ -111,27 +111,27 @@ class MasterDataset(Dataset):
         if self.withflo: 
             flo = self.load(flo_file[0])
 
-        # if self.withatt: 
-        #     assert img.size == mask.size and img.size == attmap.size, \
-        #         f'Image, mask and attention map {name} should be the same size, but are {img.size}, {mask.size} and {attmap.size}'
-        # else: 
-        #     assert img.size == mask.size, \
-        #         f'Image and mask {name} should be the same size, but are {img.size} and {mask.size}'
+        assert img.size == mask.size, \
+            f'Image and mask {name} should be the same size, but are {img.size} and {mask.size}'
         
         # Apply data augmentation 
         if self.geotransform != None: 
             if self.withatt and self.withflo: 
-                transformed = self.geotransform(image=np.asarray(img), mask=np.asarray(mask), attmap=np.asarray(attmap), flo=flo)
+                transformed = self.geotransform(image=np.asarray(img), mask=np.asarray(mask), attmap=np.asarray(attmap), flox=flo[:,:,0], floy=flo[:,:,1])
                 attmap = Image.fromarray(transformed['attmap'])
-                flo = transformed['flo']
             elif self.withatt and not self.withflo: 
                 transformed = self.geotransform(image=np.asarray(img), mask=np.asarray(mask), attmap=np.asarray(attmap))
                 attmap = Image.fromarray(transformed['attmap'])
             elif not self.withatt and self.withflo: 
-                transformed = self.geotransform(image=np.asarray(img), mask=np.asarray(mask), flo=flo)
-                flo = transformed['flo']
+                transformed = self.geotransform(image=np.asarray(img), mask=np.asarray(mask), flox=flo[:,:,0], floy=flo[:,:,1])
             else: # No attention and no optical flow input 
                 transformed = self.geotransform(image=np.asarray(img), mask=np.asarray(mask))
+            if self.withflo: 
+                flox = transformed['flox']
+                floy = transformed['floy']
+                flox = np.expand_dims(flox, axis=2)
+                floy = np.expand_dims(floy, axis=2)
+                flo = np.concatenate((flox, floy), axis=2)
             img = Image.fromarray(transformed['image'])
             mask = Image.fromarray(transformed['mask'])
         

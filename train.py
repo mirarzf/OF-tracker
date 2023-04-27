@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader, random_split
 import albumentations as A
 from tqdm import tqdm
 
-from unet.unetutils.data_loading import MasterDataset, AttentionDataset, BasicDataset
+from unet.unetutils.data_loading import MasterDataset, BasicDataset
 from unet.unetutils.dice_score import dice_loss
 from evaluate import evaluate
 from test import test_net
@@ -49,7 +49,7 @@ dir_mask = Path('./data/masks/')
 
 dir_attmap = Path('./data/attmaps/')
 
-dir_flo = Path('./data/flow/')
+dir_flo = Path('./data/flows/')
 
 ## FOR TESTING 
 dir_img_test = Path('./data/test/imgs/')
@@ -458,6 +458,7 @@ if __name__ == '__main__':
         img_scale=args.scale,
         mask_threshold=0.5, 
         useatt=args.attention, 
+        useflow=args.flow, 
         addpositions=args.wpos, 
         savepred=False, 
         visualize=args.viz)

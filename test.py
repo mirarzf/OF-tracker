@@ -9,7 +9,7 @@ import torch.nn.functional as F
 from PIL import Image
 
 from torch.utils.data import DataLoader
-from unet.unetutils.data_loading import AttentionDataset, BasicDataset
+from unet.unetutils.data_loading import MasterDataset, BasicDataset
 from unet.unetutils.dice_score import multiclass_dice_coeff, dice_coeff
 from unet.unet_model import UNet, UNetAtt
 from unet.unetutils.utils import plot_img_and_mask_and_gt
@@ -43,9 +43,13 @@ imgfilenames = [f for f in imgdir.glob('*.png') if f.is_file()]
 gtdir = Path("./data/test/masks-randomsplit")
 
 ## Attention maps input 
-attmapdir = None # Path("./")
+attmapdir = None # None when you don't want attention maps 
 # attmapdir = Path('D:\\Master Thesis\\data\\KU\\testannot')
 # attmapdir = Path("./data/test/attmaps")
+
+## Optical Flow input 
+flowdir = None # None when you don't want optical flow 
+# flowdir = Path("./data/test/opticalflow")
 
 ## Folder where to save the predicted segmentation masks 
 outdir = Path("./results/unet")
@@ -71,16 +75,16 @@ def test_net(net,
               img_scale: float = 1.0,
               mask_threshold: float = 0.5, 
               useatt: bool = False, 
+              useflow: bool = False, 
               addpositions: bool = False, 
               savepred: bool = True, 
               visualize: bool = False):
     # 1. Create dataset
     ids = [file.stem for file in images_dir.iterdir() if file.is_file() and file.name != '.gitkeep']
-    if useatt: 
-        test_set = AttentionDataset(images_dir=images_dir, masks_dir=masks_dir, file_ids = ids, scale=img_scale, attmaps_dir=attmaps_dir)
-    else: 
-        test_set = BasicDataset(images_dir=images_dir, masks_dir=masks_dir, file_ids = ids, scale=img_scale)
-    
+    attmapdirForTest = '' if attmapdir == None else attmapdir
+    flowdirForTest = '' if flowdir == None else flowdir
+    test_set = MasterDataset(images_dir=images_dir, masks_dir=masks_dir, file_ids=ids, scale=img_scale, attmaps_dir=attmapdirForTest, withatt=useatt, flo_dir=flowdirForTest, withflo=useflow) 
+
     # 2. Create data loader 
     loader_args = dict(num_workers=4, pin_memory=True)
     test_loader = DataLoader(test_set, shuffle=False, batch_size=1, **loader_args)
@@ -102,6 +106,11 @@ def test_net(net,
     # iterate over the test set
     for batch in tqdm(test_loader, total=num_val_batches, desc='Validation round', unit='batch', leave=False):
         image, mask_true = batch['image'], batch['mask']
+        # add optical flow input if toggled on 
+        if useflow: 
+            opticalflow = batch['flow']
+            image = torch.cat((image, opticalflow), dim=1)
+
         # add position input if toggled on  
         if addpositions: 
             # Add absolute positions to input 
@@ -171,6 +180,7 @@ def get_args():
                         help='Specify the file in which the model is stored')
     parser.add_argument('--input', '-i', metavar='INPUT', default=imgdir, help='Directory of input images')
     parser.add_argument('--input_att', '-a', metavar='INPUT ATTENTION', default=attmapdir, help='Directory of input attention maps')
+    parser.add_argument('--input_flow', '-of', metavar='INPUT OPTICAL FLOW', default=attmapdir, help='Directory of input optical flows')
     parser.add_argument('--ground_truth', '-gt', metavar='GROUND TRUTH', default=gtdir, help='Directory of ground truth masks')
     parser.add_argument('--output', '-o', metavar='OUTPUT', default=outdir, help='Directory for output images')
     parser.add_argument('--viz', '-v', action='store_true', default=False, 
@@ -191,9 +201,12 @@ if __name__ == '__main__':
     # set_seed(0)
 
     useatt = True if args.input_att != None else False 
+    useflow = True if args.input_flow != None else False 
 
     n_channels = 3 
     if args.wpos: 
+        n_channels += 2 
+    if useflow: 
         n_channels += 2 
     if useatt: 
         net = UNetAtt(n_channels=n_channels, n_classes=args.classes, bilinear=args.bilinear)
@@ -223,6 +236,7 @@ if __name__ == '__main__':
         img_scale=args.scale,
         mask_threshold=args.mask_threshold, 
         useatt=useatt, 
+        useflow=useflow, 
         addpositions=args.wpos, 
         savepred=savepred, 
         visualize=args.viz)

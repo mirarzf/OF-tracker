@@ -308,6 +308,8 @@ def train_net(net,
         
         if save_checkpoint or save_best_checkpoint:
             adddirckp = 'U-Net-' + str(net.n_channels)
+            if rgbtogs: 
+                adddirckp += '-grayscale'
             if useflow: 
                 adddirckp += '-w-flow'
             if addpositions: 
@@ -368,7 +370,7 @@ def get_args():
     parser.add_argument('--nosavebest', action='store_true', default=False, help="Don't save checkpoint of best epoch")
     parser.add_argument('--flow', action='store_true', default=False, help='Add optical flow to input')
     parser.add_argument('--pos', action='store_true', default=False, help='Add normalized position to input')
-    parser.add_argument('--greyscale', '-gs', action='store_true', default=False, help='Convert RGB image to Greyscale for input')
+    parser.add_argument('--grayscale', '-gs', action='store_true', default=False, help='Convert RGB image to Greyscale for input')
     parser.add_argument('--test', action='store_true', default=False, help='Do the test after training')
     parser.add_argument('--viz', action='store_true', default=False, 
                         help='Visualize the images as they are processed')
@@ -392,6 +394,8 @@ if __name__ == '__main__':
     # n_classes is the number of probabilities you want to get per pixel
     # if the model with attention is used, a different model will be loaded 
     n_channels = 3 
+    if args.grayscale: 
+        n_channels = 1 
     if args.pos: 
         n_channels += 2
     if args.flow: 

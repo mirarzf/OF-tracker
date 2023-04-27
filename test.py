@@ -191,7 +191,7 @@ def get_args():
     parser.add_argument('--bilinear', action='store_true', default=False, help='Use bilinear upsampling')
     parser.add_argument('--classes', '-c', type=int, default=2, help='Number of classes')
     parser.add_argument('--pos', action='store_true', default=False, help='Add normalized position to input')
-    parser.add_argument('--greyscale', '-gs', action='store_true', default=False, help='Convert RGB image to Greyscale for input')
+    parser.add_argument('--grayscale', '-gs', action='store_true', default=False, help='Convert RGB image to Greyscale for input')
 
     return parser.parse_args()
 
@@ -204,6 +204,8 @@ if __name__ == '__main__':
     useflow = True if args.input_flow != None else False 
 
     n_channels = 3 
+    if args.grayscale: 
+        n_channels = 1 
     if args.pos: 
         n_channels += 2 
     if useflow: 

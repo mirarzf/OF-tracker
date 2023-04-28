@@ -8,7 +8,7 @@ import torch
 import torch.nn.functional as F
 from PIL import Image
 
-from unet.unetutils.data_loading import AttentionDataset
+from unet.unetutils.data_loading import MasterDataset
 from unet.unet_model import UNet, UNetAtt
 from unet.unetutils.utils import plot_img_and_mask
 from test import mask_to_image
@@ -18,37 +18,68 @@ os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
 
 # CHOOSE INPUT DIRECTORIES 
-# imgdir = Path("../data/GTEA/frames")
+## RGB input 
 # imgdir = Path('D:\\Master Thesis\\data\\KU\\train')
 # imgdir = Path('D:\\Master Thesis\\data\\KU\\test')
-# imgdir = Path("./data/test/imgs")
-imgdir = Path("./data/test/imgs")
-imgfilenames = [f for f in imgdir.iterdir() if f.is_file() and 'mirrored' not in f.name] 
-attmapdir = None # Path("./")
+imgdir = Path("./data/test/imgs-randomsplit")
+imgfilenames = [f for f in imgdir.glob('*.png') if f.is_file()] 
+
+## Attention maps input 
+attmapdir = None # None when you don't want attention maps 
 # attmapdir = Path('D:\\Master Thesis\\data\\KU\\testannot')
-# attmapdir = Path("./data/attmaps")
+# attmapdir = Path("./data/test/attmaps")
+
+## Optical Flow input 
+# flowdir = None # None when you don't want optical flow 
+flowdir = Path("./data/test/flows")
+
+## Folder where to save the predicted segmentation masks 
 outdir = Path("./results/unet")
 
+## Checkpoint directories 
 dir_checkpoint = Path('./checkpoints')
-ckp = "U-Net-5-w-positions/tKU_bs16_e50_lr1e-1_old.pth" 
+### Model file path inside dir_checkpoint folder 
+ckp = "U-Net-2-no-rgb-w-flow/checkpoint_epoch_best.pth"
 
 
 def predict_img(net,
                 full_img: Image,
                 out_filename: str, 
                 device,
+                full_attmap: Image = None, 
+                full_flow: np.ndarray = None, 
                 img_scale: float = 1,
                 mask_threshold: float =0.5, 
                 useatt: bool = False, 
-                full_attmap: Image = None, 
+                useflow: bool = False, 
                 addpositions: bool = False, 
+                rgbtogs: bool = False, 
+                noimg: bool = False, 
                 savepred: bool = True, 
                 visualize: bool = False):
     net.eval()
     imgsize = full_img.size
-    img = torch.from_numpy(AttentionDataset.preprocess(full_img, img_scale, is_mask=False))
+    img = torch.from_numpy(MasterDataset.preprocess(full_img, img_scale, is_mask=False))
+    
+    # In the case of no rgb input 
+    lastimgchannel = 3
+    if rgbtogs: 
+        lastimgchannel = 1
+
+    # Add optical flow input if toggled on 
+    if useflow: 
+        flow = MasterDataset.normalizeflow(full_flow)
+        flow = flow.transpose((2, 0, 1)) # Transpose dimensions of optical flow array so that they become (2, width, height) 
+        flo_tensor = torch.as_tensor(flow.copy()).float().contiguous() # Transform into a tensor beforeapplying interpolation to change input size 
+        # Then change the size of your tensor before adding it to the input dictionary 
+        flo_tensor = flo_tensor.unsqueeze(0) 
+        flo_tensor = torch.nn.functional.interpolate(input=flo_tensor, size=(300,300), mode='bicubic', align_corners=True)
+        flo_tensor = flo_tensor.squeeze()
+        # Concatenate to image 
+        img = torch.cat((img, flo_tensor), dim=0)
+
+    # Add normalized positions to input if toggled on 
     if addpositions: 
-        # Add normalized positions to input 
         _, w, h = img.shape
         x = torch.tensor(np.arange(h)/(h-1))
         y = torch.tensor(np.arange(w)/(w-1))
@@ -56,11 +87,16 @@ def predict_img(net,
         grid_x = grid_x.repeat(1, 1, 1)
         grid_y = grid_y.repeat(1, 1, 1)
         img = torch.cat((img, grid_x, grid_y), dim=0)
+        
+    # remove RGB image or Grayscale image input if toggled on 
+    if noimg: 
+        img = img[lastimgchannel:,:,:]
+
     img = img.unsqueeze(0)
     img = img.to(device=device, dtype=torch.float32)
 
     if useatt: 
-        attmap = torch.from_numpy(AttentionDataset.preprocess(full_attmap, img_scale, is_mask=True))
+        attmap = torch.from_numpy(MasterDataset.preprocess(full_attmap, img_scale, is_mask=True))
         attmap = attmap.unsqueeze(0)
         attmap = attmap.to(device=device, dtype=torch.float32)
 
@@ -91,6 +127,8 @@ def get_args():
                         help='Specify the file in which the model is stored')
     inputgroup = parser.add_mutually_exclusive_group(required=True)
     inputgroup.add_argument('--input', '-i', metavar='INPUT', nargs='+', help='Filenames of input images')
+    parser.add_argument('--input_att', '-a', metavar='INPUT ATTENTION', nargs='+', help='Filenames of input attention maps')
+    parser.add_argument('--input_flow', '-of', metavar='INPUT OPTICAL FLOW', nargs='+', help='Filenames of input optical flows')
     inputgroup.add_argument('--dir', action='store_true', default=False, help='Use directories specified in predict.py file instead')
     parser.add_argument('--output', '-o', metavar='OUTPUT', nargs='+', help='Filenames of output images')
     parser.add_argument('--viz', '-v', action='store_true',
@@ -102,8 +140,9 @@ def get_args():
                         help='Scale factor for the input images')
     parser.add_argument('--bilinear', action='store_true', default=False, help='Use bilinear upsampling')
     parser.add_argument('--classes', '-c', type=int, default=2, help='Number of classes')
-    parser.add_argument('--input_att', '-a', metavar='INPUT ATTENTION', nargs='+', help='Filenames of input attention maps')
-    parser.add_argument('--wpos', action='store_true', default=False, help='Add normalized position to input')
+    parser.add_argument('--pos', action='store_true', default=False, help='Add normalized position to input')
+    parser.add_argument('--grayscale', '-gs', action='store_true', default=False, help='Convert RGB image to Greyscale for input')
+    parser.add_argument('--noimg', action='store_true', default=False, help='No image as input')
 
     return parser.parse_args()
 
@@ -116,6 +155,12 @@ def get_attmap_filenames(args):
         return [attmapdir / f.name for f in imgfilenames]
     else: 
         return args.input_att 
+    
+def get_flow_filenames(args): 
+    if args.dir and flowdir != None: 
+        return [flowdir / (f.stem + '.npy') for f in imgfilenames]
+    else: 
+        return args.input_flow 
 
 if __name__ == '__main__':
     args = get_args()
@@ -127,13 +172,21 @@ if __name__ == '__main__':
     else: 
         in_files = args.input
     in_files_att = get_attmap_filenames(args)
+    in_files_flow = get_flow_filenames(args)
     out_files = get_output_filenames(args)
 
     useatt = True if in_files_att != None else False 
+    useflow = True if in_files_flow != None else False 
 
     n_channels = 3 
-    if args.wpos: 
-        n_channels = 5 
+    if args.grayscale: 
+        n_channels = 1 
+    elif args.noimg: 
+        n_channels = 0 
+    if args.pos: 
+        n_channels += 2 
+    if useflow: 
+        n_channels += 2 
     if useatt: 
         net = UNetAtt(n_channels=n_channels, n_classes=args.classes, bilinear=args.bilinear)
     else: 
@@ -159,16 +212,24 @@ if __name__ == '__main__':
             attmap = Image.open(in_files_att[i])
         else: 
             attmap = None 
+        if useflow: 
+            flow = np.load(in_files_flow[i])
+        else: 
+            flow = None 
         
         out_filename = out_files[i]
         predict_img(net=net,
                     full_img=img,
                     out_filename=out_filename, 
+                    device=device, 
+                    full_attmap=attmap, 
+                    full_flow=flow, 
                     img_scale=args.scale,
                     mask_threshold=args.mask_threshold,
-                    device=device, 
                     useatt=useatt, 
-                    full_attmap=attmap, 
-                    addpositions=args.wpos, 
+                    useflow=useflow, 
+                    rgbtogs=args.grayscale, 
+                    noimg=args.noimg, 
+                    addpositions=args.pos, 
                     savepred=not args.no_save, 
                     visualize=args.viz)

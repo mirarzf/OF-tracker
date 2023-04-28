@@ -79,7 +79,7 @@ def test_net(net,
               useflow: bool = False, 
               addpositions: bool = False, 
               rgbtogs: bool = False, 
-              norgb: bool = False, 
+              noimg: bool = False, 
               savepred: bool = True, 
               visualize: bool = False):
     # 1. Create dataset
@@ -105,13 +105,15 @@ def test_net(net,
 
     num_val_batches = len(test_loader)
     dice_score = 0
+    
+    # In the case of no rgb input 
+    lastimgchannel = 3
+    if rgbtogs: 
+        lastimgchannel = 1
 
     # iterate over the test set
     for batch in tqdm(test_loader, total=num_val_batches, desc='Validation round', unit='batch', leave=False):
         image, mask_true = batch['image'], batch['mask']
-        # remove images input if toggled on 
-        if norgb: 
-            image = torch.empty(image.shape)
         # add optical flow input if toggled on 
         if useflow: 
             opticalflow = batch['flow']
@@ -127,6 +129,10 @@ def test_net(net,
             grid_x = grid_x.repeat(len(image), 1, 1, 1)
             grid_y = grid_y.repeat(len(image), 1, 1, 1)
             image = torch.cat((image, grid_x, grid_y), dim=1)
+        
+        # remove image input if toggled on 
+        if noimg: 
+            image = image[:,lastimgchannel:,:,:]
         
         if useatt: 
             attmap = batch['attmap']
@@ -196,7 +202,7 @@ def get_args():
     parser.add_argument('--classes', '-c', type=int, default=2, help='Number of classes')
     parser.add_argument('--pos', action='store_true', default=False, help='Add normalized position to input')
     parser.add_argument('--grayscale', '-gs', action='store_true', default=False, help='Convert RGB image to Greyscale for input')
-    parser.add_argument('--norgb', action='store_true', default=False, help='No image as input')
+    parser.add_argument('--noimg', action='store_true', default=False, help='No image as input')
     
     return parser.parse_args()
 
@@ -211,6 +217,8 @@ if __name__ == '__main__':
     n_channels = 3 
     if args.grayscale: 
         n_channels = 1 
+    elif args.noimg: 
+        n_channels = 0 
     if args.pos: 
         n_channels += 2 
     if useflow: 
@@ -247,7 +255,7 @@ if __name__ == '__main__':
         useflow=useflow, 
         addpositions=args.pos, 
         rgbtogs=args.grayscale, 
-        norgb=args.norgb, 
+        noimg=args.noimg, 
         savepred=savepred, 
         visualize=args.viz)
         

@@ -20,10 +20,15 @@ from unet.unetutils.dice_score import multiclass_dice_coeff, dice_coeff
 # set_seed(0)
 # # END REPRODUCIBILLITY 
 
-def evaluate(net, dataloader, device, useatt=False, addpos=False, addflow=False):
+def evaluate(net, dataloader, device, useatt=False, addpos=False, addflow=False, rgbtogs=False, noimg=False):
     net.eval()
     num_val_batches = len(dataloader)
     dice_score = 0
+    
+    # In the case of no rgb input 
+    lastimgchannel = 3
+    if rgbtogs: 
+        lastimgchannel = 1
 
     # iterate over the validation set
     for batch in tqdm(dataloader, total=num_val_batches, desc='Validation round', unit='batch', leave=False):
@@ -41,6 +46,10 @@ def evaluate(net, dataloader, device, useatt=False, addpos=False, addflow=False)
             grid_x = grid_x.repeat(len(image), 1, 1, 1)
             grid_y = grid_y.repeat(len(image), 1, 1, 1)
             image = torch.cat((image, grid_x, grid_y), dim=1)
+        
+        # remove image input if toggled on 
+        if noimg: 
+            image = image[:,lastimgchannel:,:,:]
         if useatt: 
             attmap = batch['attmap']
             attmap = attmap.to(device=device, dtype=torch.float32)

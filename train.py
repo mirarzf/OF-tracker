@@ -78,7 +78,7 @@ def train_net(net,
               lossframesdecay: bool = False, 
               addpositions: bool = False, 
               rgbtogs: bool = False, 
-              norgb: bool = False, 
+              noimg: bool = False, 
               foldnumber: int = 0):
     
     # 1. Choose data augmentation transforms (using albumentations) 
@@ -195,6 +195,8 @@ def train_net(net,
     # For checkpoint saving 
     if save_checkpoint or save_best_checkpoint:
         adddirckp = 'U-Net-' + str(net.n_channels)
+        if noimg: 
+            adddirckp += '-no-rgb'
         if rgbtogs: 
             adddirckp += '-grayscale'
         if useflow: 
@@ -224,8 +226,8 @@ def train_net(net,
         with tqdm(total=n_train, desc=f'Epoch {epoch}/{epochs}', unit='img') as pbar:
             for batch in train_loader:
                 images = batch['image']
-                if norgb: 
-                    images = torch.empty(images.shape)
+                ## For wandb logging: 
+                wnbimg = images[0,:lastimgchannel]
                 if useflow: 
                     # Add optical flow to input 
                     opticalflows = batch['flow']
@@ -239,10 +241,13 @@ def train_net(net,
                     grid_x = grid_x.repeat(len(images), 1, 1, 1)
                     grid_y = grid_y.repeat(len(images), 1, 1, 1)
                     images = torch.cat((images, grid_x, grid_y), dim=1)
+                if noimg: 
+                    images = images[:,lastimgchannel:,:,:]
                 true_masks = batch['mask']
                 index = batch['index']
                 if useatt: 
                     attention_maps = batch['attmap']
+
 
                 assert images.shape[1] == net.n_channels, \
                     f'Network has been defined with {net.n_channels} input channels, ' \
@@ -305,7 +310,7 @@ def train_net(net,
                 if not torch.isinf(value.grad).any():
                     histograms['Gradients/' + tag] = wandb.Histogram(value.grad.data.cpu())
 
-            val_score = evaluate(net, val_loader, device, useatt=useatt, addpos=addpositions, addflow=useflow)
+            val_score = evaluate(net, val_loader, device, useatt=useatt, addpos=addpositions, addflow=useflow, rgbtogs=rgbtogs, noimg=noimg)
             # scheduler.step(val_score)
             net.train()
 
@@ -313,27 +318,28 @@ def train_net(net,
             epochlog = {
                 'learning rate': optimizer.param_groups[0]['lr'],
                 'validation Dice': val_score,
-                'images': wandb.Image(images[0,:lastimgchannel].cpu()),
                 'cross entropy': wandb.Image(debug_loss[0].float().cpu()), 
                 'step': global_step,
                 'epoch': epoch,
                 **histograms
             } 
-            epochlog['masks'] = wandb.Image(images[0,:lastimgchannel], 
-                                             masks = { 
-                                                 'true': {
-                                                     "mask_data": true_masks[0].float().cpu().numpy(), 
-                                                     "class_labels": class_labels
-                                                 }, 
-                                                 'pred': { 
+            epochlog['images'] = wandb.Image(wnbimg.cpu()) 
+            epochlog['masks'] = wandb.Image(wnbimg.cpu(), 
+                                            masks = { 
+                                                'true': {
+                                                    "mask_data": true_masks[0].float().cpu().numpy(), 
+                                                    "class_labels": class_labels
+                                                }, 
+                                                'pred': { 
                                                     "mask_data": masks_pred.argmax(dim=1)[0].float().cpu().numpy(), 
                                                     "class_labels": class_labels
-                                                 }
-                                             })
+                                                }
+                                            })
             if useflow: 
-                ofimage = images[0,lastimgchannel:lastimgchannel+2].float().cpu()
+                ofimage = opticalflows[0].float().cpu()
                 ofimage = np.concatenate((ofimage, np.ones((1, ofimage.shape[1], ofimage.shape[2]))), axis=0)
                 epochlog['optical flow'] = wandb.Image(ofimage.transpose((1,2,0)), mode="RGB")
+            
             experiment.log(epochlog)
             
         epoch_loss /= len(train_loader)
@@ -391,7 +397,7 @@ def get_args():
     parser.add_argument('--flow', action='store_true', default=False, help='Add optical flow to input')
     parser.add_argument('--pos', action='store_true', default=False, help='Add normalized position to input')
     parser.add_argument('--grayscale', '-gs', action='store_true', default=False, help='Convert RGB image to Greyscale for input')
-    parser.add_argument('--norgb', action='store_true', default=False, help='No image as input')
+    parser.add_argument('--noimg', action='store_true', default=False, help='No image as input')
     parser.add_argument('--test', action='store_true', default=False, help='Do the test after training')
     parser.add_argument('--viz', action='store_true', default=False, 
                         help='Visualize the images as they are processed')
@@ -417,6 +423,8 @@ if __name__ == '__main__':
     n_channels = 3 
     if args.grayscale: 
         n_channels = 1 
+    elif args.noimg: 
+        n_channels = 0 
     if args.pos: 
         n_channels += 2
     if args.flow: 
@@ -455,7 +463,7 @@ if __name__ == '__main__':
             lossframesdecay=args.framesdecay, 
             addpositions=args.pos, 
             rgbtogs=args.grayscale, 
-            norgb=args.norgb, 
+            noimg=args.noimg, 
             foldnumber=args.foldnb)
         logging.info(f'Best model is found at checkpoint #{best_ckpt}.')
     except KeyboardInterrupt:
@@ -489,6 +497,7 @@ if __name__ == '__main__':
         useflow=args.flow, 
         addpositions=args.pos, 
         rgbtogs=args.grayscale, 
+        noimg=args.noimg, 
         savepred=False, 
         visualize=args.viz)
         logging.info(f'DICE score of testing dataset is: {test_DICE}')

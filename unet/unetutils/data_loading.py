@@ -69,6 +69,15 @@ class MasterDataset(Dataset):
             img_ndarray = img_ndarray / 255
 
         return img_ndarray
+    
+    @staticmethod
+    def normalizeflow(flow_array): 
+        flox = flow_array[:,:,0]
+        floy = flow_array[:,:,1]
+        doublenorms = 2*np.sqrt(flox**2+floy**2)
+        doublenorms = doublenorms[:,:,np.newaxis]
+        doublenorms = np.concatenate((doublenorms, doublenorms), axis=2)
+        return flow_array/doublenorms+np.ones(doublenorms.shape)/2
 
     @staticmethod
     def load(filename):
@@ -151,6 +160,7 @@ class MasterDataset(Dataset):
         if self.withatt: 
             retdict['attmap'] = torch.as_tensor(attmap.copy()).long().contiguous()
         if self.withflo: 
+            flo = self.normalizeflow(flo)
             flo = flo.transpose((2, 0, 1)) # Transpose dimensions of optical flow array so that they become (2, width, height) 
             flo_tensor = torch.as_tensor(flo.copy()).float().contiguous() # Transform into a tensor beforeapplying interpolation to change input size 
             # Then change the size of your tensor before adding it to the input dictionary 

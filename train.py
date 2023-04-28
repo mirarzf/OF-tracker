@@ -78,6 +78,7 @@ def train_net(net,
               lossframesdecay: bool = False, 
               addpositions: bool = False, 
               rgbtogs: bool = False, 
+              norgb: bool = False, 
               foldnumber: int = 0):
     
     # 1. Choose data augmentation transforms (using albumentations) 
@@ -155,7 +156,7 @@ def train_net(net,
     val_loader = DataLoader(val_set, shuffle=False, batch_size=batch_size, **loader_args)
 
     # (Initialize logging)
-    project_name = "OF-Tracker-final"
+    project_name = "OF-Tracker-TBDeleted" # "OF-Tracker-final" # For final wandb project 
     experiment = wandb.init(project=project_name, resume='allow', anonymous='must')
     experiment.config.update(dict(
         epochs=epochs, 
@@ -223,6 +224,8 @@ def train_net(net,
         with tqdm(total=n_train, desc=f'Epoch {epoch}/{epochs}', unit='img') as pbar:
             for batch in train_loader:
                 images = batch['image']
+                if norgb: 
+                    images = torch.empty(images.shape)
                 if useflow: 
                     # Add optical flow to input 
                     opticalflows = batch['flow']
@@ -388,6 +391,7 @@ def get_args():
     parser.add_argument('--flow', action='store_true', default=False, help='Add optical flow to input')
     parser.add_argument('--pos', action='store_true', default=False, help='Add normalized position to input')
     parser.add_argument('--grayscale', '-gs', action='store_true', default=False, help='Convert RGB image to Greyscale for input')
+    parser.add_argument('--norgb', action='store_true', default=False, help='No image as input')
     parser.add_argument('--test', action='store_true', default=False, help='Do the test after training')
     parser.add_argument('--viz', action='store_true', default=False, 
                         help='Visualize the images as they are processed')
@@ -451,6 +455,7 @@ if __name__ == '__main__':
             lossframesdecay=args.framesdecay, 
             addpositions=args.pos, 
             rgbtogs=args.grayscale, 
+            norgb=args.norgb, 
             foldnumber=args.foldnb)
         logging.info(f'Best model is found at checkpoint #{best_ckpt}.')
     except KeyboardInterrupt:

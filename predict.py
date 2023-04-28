@@ -25,13 +25,13 @@ imgdir = Path("./data/test/imgs-randomsplit")
 imgfilenames = [f for f in imgdir.glob('*.png') if f.is_file()] 
 
 ## Attention maps input 
-attmapdir = None # None when you don't want attention maps 
 # attmapdir = Path('D:\\Master Thesis\\data\\KU\\testannot')
 # attmapdir = Path("./data/test/attmaps")
+attmapdir = None # None when you don't want attention maps 
 
 ## Optical Flow input 
-# flowdir = None # None when you don't want optical flow 
 flowdir = Path("./data/test/flows")
+# flowdir = None # None when you don't want optical flow 
 
 ## Folder where to save the predicted segmentation masks 
 outdir = Path("./results/unet")
@@ -59,6 +59,9 @@ def predict_img(net,
                 visualize: bool = False):
     net.eval()
     imgsize = full_img.size
+    # If grayscale on, convert img 
+    if rgbtogs: 
+        full_img = full_img.convert('L')
     img = torch.from_numpy(MasterDataset.preprocess(full_img, img_scale, is_mask=False))
     
     # In the case of no rgb input 
@@ -140,6 +143,8 @@ def get_args():
                         help='Scale factor for the input images')
     parser.add_argument('--bilinear', action='store_true', default=False, help='Use bilinear upsampling')
     parser.add_argument('--classes', '-c', type=int, default=2, help='Number of classes')
+    parser.add_argument('--flow', action='store_true', default=False, help='Add optical flow to input')
+    parser.add_argument('--attention', '-att', action='store_true', default=False, help='Use UNet with attention model')
     parser.add_argument('--pos', action='store_true', default=False, help='Add normalized position to input')
     parser.add_argument('--grayscale', '-gs', action='store_true', default=False, help='Convert RGB image to Greyscale for input')
     parser.add_argument('--noimg', action='store_true', default=False, help='No image as input')
@@ -151,16 +156,16 @@ def get_output_filenames(args):
     return args.output or [outdir / f.name for f in imgfilenames]
     
 def get_attmap_filenames(args): 
-    if args.dir and attmapdir != None: 
+    if args.dir or args.attention: 
         return [attmapdir / f.name for f in imgfilenames]
     else: 
         return args.input_att 
     
 def get_flow_filenames(args): 
-    if args.dir and flowdir != None: 
+    if args.dir or args.flow: 
         return [flowdir / (f.stem + '.npy') for f in imgfilenames]
     else: 
-        return args.input_flow 
+        return args.input_flow
 
 if __name__ == '__main__':
     args = get_args()

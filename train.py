@@ -390,7 +390,7 @@ def get_args():
     parser.add_argument('--amp', action='store_true', default=False, help='Use mixed precision')
     parser.add_argument('--bilinear', action='store_true', default=False, help='Use bilinear upsampling')
     parser.add_argument('--classes', '-c', type=int, default=2, help='Number of classes')
-    parser.add_argument('--attention', action='store_true', default=False, help='Use UNet with attention model')
+    parser.add_argument('--attention', '-att', action='store_true', default=False, help='Use UNet with attention model')
     parser.add_argument('--framesdecay', action='store_true', default=False, help='Modify loss function to add the frames lack of importance')
     parser.add_argument('--saveall', action='store_true', default=False, help='Save checkpoint at each epoch')
     parser.add_argument('--nosavebest', action='store_true', default=False, help="Don't save checkpoint of best epoch")

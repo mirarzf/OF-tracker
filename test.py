@@ -200,6 +200,7 @@ def get_args():
                         help='Scale factor for the input images')
     parser.add_argument('--bilinear', action='store_true', default=False, help='Use bilinear upsampling')
     parser.add_argument('--classes', '-c', type=int, default=2, help='Number of classes')
+    parser.add_argument('--flow', action='store_true', default=False, help='Add optical flow to input')
     parser.add_argument('--pos', action='store_true', default=False, help='Add normalized position to input')
     parser.add_argument('--grayscale', '-gs', action='store_true', default=False, help='Convert RGB image to Greyscale for input')
     parser.add_argument('--noimg', action='store_true', default=False, help='No image as input')
@@ -212,7 +213,7 @@ if __name__ == '__main__':
     # set_seed(0)
 
     useatt = True if args.input_att != None else False 
-    useflow = True if args.input_flow != None else False 
+    useflow = True if (args.flow and args.input_flow != None) else False 
 
     n_channels = 3 
     if args.grayscale: 

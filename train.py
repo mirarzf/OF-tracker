@@ -156,7 +156,8 @@ def train_net(net,
     val_loader = DataLoader(val_set, shuffle=False, batch_size=batch_size, **loader_args)
 
     # (Initialize logging)
-    project_name = "OF-Tracker-TBDeleted" # "OF-Tracker-final" # For final wandb project 
+    project_name = "OF-Tracker-final" # For final wandb project 
+    # project_name = "OF-Tracker-TBDeleted" # "OF-Tracker-final" # For final wandb project 
     experiment = wandb.init(project=project_name, resume='allow', anonymous='must')
     experiment.config.update(dict(
         epochs=epochs, 
@@ -166,6 +167,7 @@ def train_net(net,
         save_checkpoint=save_checkpoint, 
         img_scale=img_scale, 
         amp=amp, 
+        use_img=noimg, 
         use_attention=useatt, 
         use_opticalflow=useflow, 
         use_positions=addpositions, 

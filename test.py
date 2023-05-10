@@ -34,13 +34,13 @@ os.environ['KMP_DUPLICATE_LIB_OK']='True'
 ## RGB input 
 # imgdir = Path('D:\\Master Thesis\\data\\KU\\train')
 # imgdir = Path('D:\\Master Thesis\\data\\KU\\test')
-imgdir = Path("./data/test/imgs-randomsplit")
+imgdir = Path("./data/test/imgs")
 imgfilenames = [f for f in imgdir.glob('*.png') if f.is_file()] 
 
 ## Ground truth masks 
 # gtdir = Path('D:\\Master Thesis\\data\\KU\\trainannot')
 # gtdir = Path('D:\\Master Thesis\\data\\KU\\testannot')
-gtdir = Path("./data/test/masks-randomsplit")
+gtdir = Path("./data/test/masks")
 
 ## Attention maps input 
 attmapdir = None # None when you don't want attention maps 

@@ -74,10 +74,10 @@ class MasterDataset(Dataset):
     def normalizeflow(flow_array): 
         flox = flow_array[:,:,0]
         floy = flow_array[:,:,1]
-        doublenorms = 2*np.sqrt(flox**2+floy**2)
+        doublenorms = np.sqrt(flox**2+floy**2)
         doublenorms = doublenorms[:,:,np.newaxis]
         doublenorms = np.concatenate((doublenorms, doublenorms), axis=2)
-        return flow_array/doublenorms+np.ones(doublenorms.shape)/2
+        return flow_array/doublenorms
 
     @staticmethod
     def load(filename):

@@ -24,8 +24,8 @@ from raft.raftutils.flow_viz import flow_to_image
 
 
 ### Folders 
-videofolder = 'C:\\Users\\hvrl\\Documents\\data\\KU\\videos\\annotated'
-outputfolder = ".\\results\\flows"
+videofolder = 'C:\\Users\\hvrl\\Documents\\data\\GTEA\\videos\\'
+outputfolder = ".\\results\\flows\\GTEA"
 model_folder = "C:\\Users\\hvrl\\Documents\\RAFT-master\\models"
 
 def retrieveFlow(args): 
@@ -127,7 +127,7 @@ def retrieveFlow(args):
                 flowimg = flow_to_image(currentflow, args.clippercentage)
 
                 # Save optical flow 
-                outputname = str(video_id.stem).lower() + f'{framecounter}'
+                outputname = str(video_id.stem)[:-2].lower() + f'{framecounter:010}'
                 ## Save optical flow Numpy array 
                 outputnpy = output_folder / (outputname + '.npy')
                 np.save(outputnpy, currentflow)

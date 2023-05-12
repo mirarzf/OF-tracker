@@ -1,80 +1,178 @@
-import sys
-sys.path.append('core')
+# This script is used to retrieve the optical flow and change the size of the input if needed. 
+# The size of the input to be changed is changed with the destsize argument in the parser. 
 
+######################################################################################### 
+
+# import sys
+# sys.path.append('raft')
+
+from pathlib import Path 
 import argparse
-import os
-import cv2
-import glob
-import numpy as np
+import logging
+
+import pandas as pd 
+
+import numpy as np 
+import cv2 as cv 
 import torch
-from PIL import Image
 
-from raft import RAFT
-from raft.raftutils import flow_viz
+from utils import annot_viz 
+
+from raft.raft import RAFT
 from raft.raftutils.utils import InputPadder
+from raft.raftutils.flow_viz import flow_to_image
 
 
+### Folders 
+videofolder = 'C:\\Users\\hvrl\\Documents\\data\\KU\\videos\\annotated'
+outputfolder = ".\\results\\flows"
+model_folder = "C:\\Users\\hvrl\\Documents\\RAFT-master\\models"
 
-DEVICE = 'cuda'
+def retrieveFlow(args): 
 
-def load_image(imfile):
-    image = Image.open(imfile)
-    image = image.resize((300, 300), resample=Image.BICUBIC)
-    img = np.array(image).astype(np.uint8)
-    img = torch.from_numpy(img).permute(2, 0, 1).float()
-    return img[None].to(DEVICE)
+    video_folder = Path(args.videofolder)
+    output_folder = Path(args.outputfolder)
 
+    scale = args.scale
 
-def viz(img, flo, viz = True, save = False):
-    img = img[0].permute(1,2,0).cpu().numpy()
-    flo = flo[0].permute(1,2,0).cpu().numpy()
-    
-    # map flow to rgb image
-    flo = flow_viz.flow_to_image(flo)
-    img_flo = np.concatenate([img, flo], axis=0)
+    # Get all the video_ids 
+    video_id_list = [video_id for video_id in video_folder.iterdir() if video_id.is_file()]
 
-    # import matplotlib.pyplot as plt
-    # plt.imshow(img_flo / 255.0)
-    # plt.show()
-    if viz: 
-        cv2.imshow('image', img_flo[:, :, [2,1,0]]/255.0)
-        cv2.waitKey()
-    
-    if save: 
-        # cv2.imwrite()
-
-
-def computeflow(args):
+    ## OPTICAL FLOW MODEL PREPARATION 
+    # Initialize RAFT model 
     model = torch.nn.DataParallel(RAFT(args))
-    model.load_state_dict(torch.load(args.model))
+    model.load_state_dict(torch.load(Path(model_folder) / args.model))
 
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    logging.info(f'Using device {device}')
     model = model.module
-    model.to(DEVICE)
+    model.to(device)
     model.eval()
 
-    with torch.no_grad():
-        images = glob.glob(os.path.join(args.path, '*.png')) + \
-                 glob.glob(os.path.join(args.path, '*.jpg'))
+    # Define output folders 
+    if not output_folder.exists(): 
+        output_folder.mkdir()
+    
+    if args.saveRGB: 
+        if not (output_folder / 'RGB').exists(): 
+            (output_folder / 'RGB').mkdir()
+
+    if args.savevideo: 
+        if not (output_folder / 'video').exists(): 
+            (output_folder / 'video').mkdir()
+
+    ## WORK ON EACH VIDEO OF THE FOLDER 
+    with torch.no_grad(): 
+
+        # Work on one video_id at a time 
+        for video_id in video_id_list: 
+            logging.info(f'Processing video {video_id.stem}... ')
+
+            # Read original videos for frame scale and eventual output video writer 
+            origvidpath = str(video_id)
+            cap = cv.VideoCapture(origvidpath)
+
+            # Initialize the padder for later and give the correct width and height 
+            if args.width == None and args.height == None: 
+                frame_width_old = int(scale*cap.get(cv.CAP_PROP_FRAME_WIDTH)) 
+                frame_height_old = int(scale*cap.get(cv.CAP_PROP_FRAME_HEIGHT)) 
+            else: 
+                frame_width_old = args.width 
+                frame_height_old = args.height 
+
+            ret, firstframe = cap.read()
+            cap.release()
+            firstframe = annot_viz.load_image(firstframe, (frame_width_old, frame_height_old))
+            padder = InputPadder((firstframe.shape))
+            
+            frame_width = frame_width_old + padder._pad[0] + padder._pad[1] 
+            frame_height = frame_height_old + padder._pad[2] + padder._pad[3] 
+            if args.savevideo: 
+                # Create video writer to save color coded optical flow to a video 
+                ## Define output video parameters 
+                outputname = video_id + "_extract.mp4" 
+                fourcc = cv.VideoWriter_fourcc(*'mp4v')
+                fps = cap.get(cv.CAP_PROP_FPS)
+
+                logging.info(f'Creating new video writer:'
+                             f'\toriginal video path: {origvidpath}'
+                             f'\t{fps} frames per second'
+                             f'\tframe width, frame_height = {frame_width}, {frame_height}')
+
+                ## Define output video writer 
+                outputvideo = output_folder / 'video' / outputname
+                output = cv.VideoWriter(outputvideo, fourcc, fps, (frame_width, frame_height))
+
+            # Capture the first two frames
+            cap = cv.VideoCapture(origvidpath)
+            ret, beforeframe = cap.read() 
+            ret, currentframeimg = cap.read()
+
+            # Prep the before frame and set the InputPadder 
+            beforeframe = annot_viz.load_image(beforeframe, (frame_width, frame_height))
+            padder = InputPadder(beforeframe.shape)
+            beforeframe = padder.pad(beforeframe)[0]
+
+            # Frame counter for output name 
+            framecounter = 1
+
+            while ret:      
+                # Prep the current frame for optical flow retrieving
+                currentframeimg = annot_viz.load_image(currentframeimg, (frame_width, frame_height))
+                currentframe = padder.pad(currentframeimg)[0]
+
+                flow_low, currentflow = model(beforeframe, currentframe, iters=20, test_mode=True)
+                currentflow = currentflow[0].permute(1,2,0).cpu().detach().numpy()
+
+                flowimg = flow_to_image(currentflow, args.clippercentage)
+
+                # Save optical flow 
+                outputname = str(video_id.stem).lower() + f'{framecounter}'
+                ## Save optical flow Numpy array 
+                outputnpy = output_folder / (outputname + '.npy')
+                np.save(outputnpy, currentflow)
+                logging.info(f'Saved to {outputnpy}')
+
+                ## Save optical flow color coded RGB image 
+                if args.saveRGB: 
+                    outputimg = output_folder / 'RGB' / (outputname + '.jpg')
+                    cv.imwrite(str(outputimg), flowimg)
+                    logging.info(f'Saved to {outputimg}')
+
+                ## Save optical flow in a video 
+                if args.savevideo: 
+                    output.write(flowimg)
+
+                # Set new currentframe 
+                beforeframe = currentframe
+                ret, currentframeimg = cap.read()
+                framecounter+=1 
         
-        images = sorted(images)
-        for imfile1, imfile2 in zip(images[:-1], images[1:]):
-            image1 = load_image(imfile1)
-            image2 = load_image(imfile2)
+            cap.release()
+            if args.savevideo: 
+                output.release() 
+                logging.info(f'Video of optical flow saved to {outputvideo}')
 
-            padder = InputPadder(image1.shape)
-            image1, image2 = padder.pad(image1, image2)
-
-            flow_low, flow_up = model(image1, image2, iters=20, test_mode=True)
-            viz(image1, flow_up)
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--model', help="restore checkpoint")
-    parser.add_argument('--path', help="dataset for evaluation")
+def get_args(): 
+    parser = argparse.ArgumentParser(description="This script creates a video containing all the resulting map of attention "
+                                                "to focus the segmentation map around the hand")
+    parser.add_argument('--model', default='raft-things.pth', help="restore checkpoint")
+    parser.add_argument('--videofolder', '-vf', default=videofolder, help="folder containig the videos to extract optical flow from")
+    parser.add_argument('--outputfolder', default=outputfolder, help="folder to save the optical flow frames to")
+    parser.add_argument('--scale', default=0.5, type=float, help="scale to resize the video frames. Default: 0.5")
+    parser.add_argument('--width', type=int, help="width to resize the video frames to")
+    parser.add_argument('--height', type=int, help="height to resize the video frames to")
+    parser.add_argument('--clippercentage', '-cp', type=int, default="100", help="percentage of the size of the image to clip the optical flow value to")
     parser.add_argument('--small', action='store_true', help='use small model')
     parser.add_argument('--mixed_precision', action='store_true', help='use mixed precision')
     parser.add_argument('--alternate_corr', action='store_true', help='use efficent correlation implementation')
-    args = parser.parse_args()
+    parser.add_argument('--saveRGB', action='store_true', default=False, help='Save color coded optical flow')
+    parser.add_argument('--savevideo', action='store_true', default=False, help='Save color coded optical flow into a video')
+    return parser.parse_args()
 
-    computeflow(args)
+if __name__ == '__main__':
+    args = get_args()
+
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+
+    retrieveFlow(args)

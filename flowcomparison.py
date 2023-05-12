@@ -25,7 +25,6 @@ DEVICE = 'cuda'
 
 def compareToAnnotatedPointsFlow(args): 
 
-    
     ## SET THE ARGUMENTS FROM THE PARSER 
     annotatedpoints = args.dataset 
     annotatedpoints = "centerpointstest.csv"

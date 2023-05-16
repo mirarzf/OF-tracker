@@ -22,8 +22,8 @@ from raft.raftutils.flow_viz import flow_to_image
 
 
 ### Folders 
-videofolder = 'C:\\Users\\hvrl\\Documents\\data\\GTEA\\videos\\'
-outputfolder = ".\\results\\flows\\GTEA"
+videofolder = 'C:\\Users\\hvrl\\Documents\\data\\KU\\videos\\annotated'
+outputfolder = ".\\results\\flows\\KU"
 model_folder = "C:\\Users\\hvrl\\Documents\\RAFT-master\\models"
 
 def retrieveFlow(args): 
@@ -126,7 +126,7 @@ def retrieveFlow(args):
 
                 # Save optical flow 
                 # outputname = str(video_id.stem)[:-2].lower() + f'{framecounter:010}' # TO MATCH GTEA FRAMES NAMES 
-                outputname = str(video_id.stem) + f'{framecounter}' # TO MATCH SURGERY VIDEO FRAMES NAMES 
+                outputname = str(video_id.stem) + f'_{framecounter}' # TO MATCH SURGERY VIDEO FRAMES NAMES 
                 ## Save optical flow Numpy array 
                 outputnpy = output_folder / (outputname + '.npy')
                 np.save(outputnpy, currentflow)

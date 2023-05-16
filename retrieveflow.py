@@ -10,8 +10,6 @@ from pathlib import Path
 import argparse
 import logging
 
-import pandas as pd 
-
 import numpy as np 
 import cv2 as cv 
 import torch
@@ -127,7 +125,8 @@ def retrieveFlow(args):
                 flowimg = flow_to_image(currentflow, args.clippercentage)
 
                 # Save optical flow 
-                outputname = str(video_id.stem)[:-2].lower() + f'{framecounter:010}'
+                # outputname = str(video_id.stem)[:-2].lower() + f'{framecounter:010}' # TO MATCH GTEA FRAMES NAMES 
+                outputname = str(video_id.stem) + f'{framecounter}' # TO MATCH SURGERY VIDEO FRAMES NAMES 
                 ## Save optical flow Numpy array 
                 outputnpy = output_folder / (outputname + '.npy')
                 np.save(outputnpy, currentflow)
@@ -154,8 +153,9 @@ def retrieveFlow(args):
                 logging.info(f'Video of optical flow saved to {outputvideo}')
 
 def get_args(): 
-    parser = argparse.ArgumentParser(description="This script creates a video containing all the resulting map of attention "
-                                                "to focus the segmentation map around the hand")
+    parser = argparse.ArgumentParser(description=
+                                     "This script retrieves optical flow from the videos "
+                                     "in the folder given in input")
     parser.add_argument('--model', default='raft-things.pth', help="restore checkpoint")
     parser.add_argument('--videofolder', '-vf', default=videofolder, help="folder containig the videos to extract optical flow from")
     parser.add_argument('--outputfolder', default=outputfolder, help="folder to save the optical flow frames to")

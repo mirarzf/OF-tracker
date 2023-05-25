@@ -124,13 +124,9 @@ def retrieveFlow(args):
 
                 flow_low, currentflow = model(beforeframe, currentframe, iters=20, test_mode=True)
                 currentflow = currentflow[0].permute(1,2,0).cpu().detach().numpy()
-                print(currentflow.shape)
-                print(padder._pad)
                 currentflow = currentflow[paddervalues[2]:-paddervalues[3], paddervalues[0]:-paddervalues[1],:]
-                print(currentflow.shape)
 
                 flowimg = flow_to_image(currentflow, args.clippercentage)
-                print(flowimg.shape)
 
                 # Save optical flow 
                 # outputname = str(video_id.stem)[:-2].lower() + f'{framecounter:010}' # TO MATCH GTEA FRAMES NAMES 

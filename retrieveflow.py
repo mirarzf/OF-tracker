@@ -82,6 +82,7 @@ def retrieveFlow(args):
             cap.release()
             firstframe = annot_viz.load_image(firstframe, (frame_width_old, frame_height_old))
             padder = InputPadder((firstframe.shape))
+            paddervalues = padder._pad
             
             frame_width = frame_width_old + padder._pad[0] + padder._pad[1] 
             frame_height = frame_height_old + padder._pad[2] + padder._pad[3] 
@@ -95,24 +96,26 @@ def retrieveFlow(args):
                 logging.info(f'Creating new video writer:'
                              f'\toriginal video path: {origvidpath}'
                              f'\t{fps} frames per second'
-                             f'\tframe width, frame_height = {frame_width}, {frame_height}')
+                             f'\tframe width, frame_height = {frame_width_old}, {frame_height_old}')
 
                 ## Define output video writer 
                 outputvideo = output_folder / 'video' / outputname
-                output = cv.VideoWriter(outputvideo, fourcc, fps, (frame_width, frame_height))
+                output = cv.VideoWriter(outputvideo, fourcc, fps, (frame_width_old, frame_height_old))
 
             # Capture the first two frames
             cap = cv.VideoCapture(origvidpath)
             ret, beforeframe = cap.read() 
+            # Frame counter for output name 
+            framecounter = 1
+            while framecounter % args.framestep != 0: 
+                ret, currentframeimg = cap.read()
+                framecounter += 1 
             ret, currentframeimg = cap.read()
 
             # Prep the before frame and set the InputPadder 
             beforeframe = annot_viz.load_image(beforeframe, (frame_width, frame_height))
             padder = InputPadder(beforeframe.shape)
             beforeframe = padder.pad(beforeframe)[0]
-
-            # Frame counter for output name 
-            framecounter = 1
 
             while ret:      
                 # Prep the current frame for optical flow retrieving
@@ -121,8 +124,13 @@ def retrieveFlow(args):
 
                 flow_low, currentflow = model(beforeframe, currentframe, iters=20, test_mode=True)
                 currentflow = currentflow[0].permute(1,2,0).cpu().detach().numpy()
+                print(currentflow.shape)
+                print(padder._pad)
+                currentflow = currentflow[paddervalues[2]:-paddervalues[3], paddervalues[0]:-paddervalues[1],:]
+                print(currentflow.shape)
 
                 flowimg = flow_to_image(currentflow, args.clippercentage)
+                print(flowimg.shape)
 
                 # Save optical flow 
                 # outputname = str(video_id.stem)[:-2].lower() + f'{framecounter:010}' # TO MATCH GTEA FRAMES NAMES 
@@ -144,8 +152,11 @@ def retrieveFlow(args):
 
                 # Set new currentframe 
                 beforeframe = currentframe
+                framecounter += 1 
+                while framecounter % args.framestep != 0: 
+                    ret, currentframeimg = cap.read()
+                    framecounter += 1 
                 ret, currentframeimg = cap.read()
-                framecounter+=1 
         
             cap.release()
             if args.savevideo: 
@@ -160,6 +171,7 @@ def get_args():
     parser.add_argument('--videofolder', '-vf', default=videofolder, help="folder containig the videos to extract optical flow from")
     parser.add_argument('--outputfolder', default=outputfolder, help="folder to save the optical flow frames to")
     parser.add_argument('--scale', default=0.5, type=float, help="scale to resize the video frames. Default: 0.5")
+    parser.add_argument('--framestep', default=1, type=int, help="flow is computed between frames spaced by this numbder (framestep)")
     parser.add_argument('--width', type=int, help="width to resize the video frames to")
     parser.add_argument('--height', type=int, help="height to resize the video frames to")
     parser.add_argument('--clippercentage', '-cp', type=int, default="100", help="percentage of the size of the image to clip the optical flow value to")

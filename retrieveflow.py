@@ -122,7 +122,7 @@ def retrieveFlow(args):
                 currentframeimg = annot_viz.load_image(currentframeimg, (frame_width, frame_height))
                 currentframe = padder.pad(currentframeimg)[0]
 
-                flow_low, currentflow = model(beforeframe, currentframe, iters=20, test_mode=True)
+                coordsubstract, currentflow = model(beforeframe, currentframe, iters=20, test_mode=True)
                 currentflow = currentflow[0].permute(1,2,0).cpu().detach().numpy()
                 currentflow = currentflow[paddervalues[2]:-paddervalues[3], paddervalues[0]:-paddervalues[1],:]
 

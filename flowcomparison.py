@@ -115,7 +115,7 @@ def compareToAnnotatedPointsFlow(args):
 
                 if len(aplist) > 0:         
                     # Retrieve the optical flow between beforeframe and currentframe 
-                    flow_low, currentflow = model(beforeframe, currentframe, iters=20, test_mode=True)
+                    coordsubstract, currentflow = model(beforeframe, currentframe, iters=20, test_mode=True)
                     currentflow = currentflow[0].permute(1,2,0).cpu().detach().numpy()
 
                     # Compare the "annotated" optical flow to all the other optical flow vectors 

@@ -105,7 +105,7 @@ def showAnnotatedPointsFlow(args):
                 beforeframe, currentframe = padder.pad(beforeframe, currentframe)
 
                 # Retrieve the optical flow between beforeframe and currentframe 
-                flow_low, currentflow = model(beforeframe, currentframe, iters=20, test_mode=True)
+                coordsubstract, currentflow = model(beforeframe, currentframe, iters=20, test_mode=True)
                 
                 # Draw on the image 
                 currentframe = currentframe[0].permute(1,2,0).cpu().numpy()

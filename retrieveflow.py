@@ -124,7 +124,7 @@ def retrieveFlow(args):
 
                 coordsubstract, currentflow = model(beforeframe, currentframe, iters=20, test_mode=True)
                 currentflow = currentflow[0].permute(1,2,0).cpu().detach().numpy()
-                currentflow = currentflow[paddervalues[2]:-paddervalues[3], paddervalues[0]:-paddervalues[1],:]
+                currentflow = currentflow[paddervalues[2]:currentflow.shape[0]-paddervalues[3], paddervalues[0]:currentflow.shape[1]-paddervalues[1],:]
 
                 flowimg = flow_to_image(currentflow, args.clippercentage)
 

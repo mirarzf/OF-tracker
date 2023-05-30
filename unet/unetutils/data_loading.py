@@ -55,10 +55,13 @@ class MasterDataset(Dataset):
         img_ndarray = np.asarray(pil_img)
         if is_mask: 
             # img_ndarray = np.where((img_ndarray == 1) | (img_ndarray == 2), 1, 0)[:,:,0] # Last index is to only keep one layer of image and not three channels for R, G and B.  
-            # img_ndarray = np.where(img_ndarray > 0.5, 1, 0)[:,:,0] # Last index is to only keep one layer of image and not three channels for R, G and B.  
+            # img_ndarray = np.where(img_ndarray > 0.5, 1, 0)[:,:,0]  
             # thres = np.quantile(img_ndarray, 0.75)
             thres = 0
-            img_ndarray = np.where(img_ndarray > thres, 1, 0)[:,:,0]
+            if img_ndarray.ndim == 3: 
+                img_ndarray = np.where(img_ndarray > thres, 1, 0)[:,:,0] # Last index is to only keep one layer of image and not three channels with same value for (R,G,B). 
+            else: 
+                img_ndarray = np.where(img_ndarray > thres, 1, 0)
 
         if not is_mask:
             if img_ndarray.ndim == 2:

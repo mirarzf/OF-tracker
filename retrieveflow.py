@@ -102,60 +102,61 @@ def retrieveFlow(args):
                 outputvideo = output_folder / 'video' / outputname
                 output = cv.VideoWriter(outputvideo, fourcc, fps, (frame_width_old, frame_height_old))
 
-            # Capture the first two frames
-            cap = cv.VideoCapture(origvidpath)
-            ret, beforeframe = cap.read() 
-            # Frame counter for output name 
-            framecounter = 1
-            while framecounter % args.framestep != 0: 
-                ret, currentframeimg = cap.read()
-                framecounter += 1 
-            ret, currentframeimg = cap.read()
-
-            # Prep the before frame and set the InputPadder 
-            beforeframe = annot_viz.load_image(beforeframe, (frame_width, frame_height))
-            padder = InputPadder(beforeframe.shape)
-            beforeframe = padder.pad(beforeframe)[0]
-
-            while ret:      
-                # Prep the current frame for optical flow retrieving
-                currentframeimg = annot_viz.load_image(currentframeimg, (frame_width, frame_height))
-                currentframe = padder.pad(currentframeimg)[0]
-
-                coordsubstract, currentflow = model(beforeframe, currentframe, iters=20, test_mode=True)
-                currentflow = currentflow[0].permute(1,2,0).cpu().detach().numpy()
-                currentflow = currentflow[paddervalues[2]:currentflow.shape[0]-paddervalues[3], paddervalues[0]:currentflow.shape[1]-paddervalues[1],:]
-
-                flowimg = flow_to_image(currentflow, args.clippercentage)
-
-                # Save optical flow 
-                # outputname = str(video_id.stem)[:-2].lower() + f'{framecounter:010}' # TO MATCH GTEA FRAMES NAMES 
-                outputname = str(video_id.stem) + f'_{framecounter}' # TO MATCH SURGERY VIDEO FRAMES NAMES 
-                ## Save optical flow Numpy array 
-                outputnpy = output_folder / (outputname + '.npy')
-                np.save(outputnpy, currentflow)
-                logging.info(f'Saved to {outputnpy}')
-
-                ## Save optical flow color coded RGB image 
-                if args.saveRGB: 
-                    outputimg = output_folder / 'RGB' / (outputname + '.jpg')
-                    cv.imwrite(str(outputimg), flowimg)
-                    logging.info(f'Saved to {outputimg}')
-
-                ## Save optical flow in a video 
-                if args.savevideo: 
-                    output.write(flowimg)
-
-                # Set new currentframe 
-                beforeframe = currentframe
-                framecounter += 1 
-                while framecounter % args.framestep != 0: 
+            for firstframenb in range(0, args.framestep): 
+                # Capture the first two frames
+                cap = cv.VideoCapture(origvidpath)
+                ret, beforeframe = cap.read() 
+                # Frame counter for output name 
+                framecounter = firstframenb+1
+                while framecounter % args.framestep != firstframenb: 
                     ret, currentframeimg = cap.read()
                     framecounter += 1 
                 ret, currentframeimg = cap.read()
-        
-            cap.release()
-            if args.savevideo: 
+
+                # Prep the before frame and set the InputPadder 
+                beforeframe = annot_viz.load_image(beforeframe, (frame_width, frame_height))
+                padder = InputPadder(beforeframe.shape)
+                beforeframe = padder.pad(beforeframe)[0]
+
+                while ret:      
+                    # Prep the current frame for optical flow retrieving
+                    currentframeimg = annot_viz.load_image(currentframeimg, (frame_width, frame_height))
+                    currentframe = padder.pad(currentframeimg)[0]
+
+                    coordsubstract, currentflow = model(beforeframe, currentframe, iters=20, test_mode=True)
+                    currentflow = currentflow[0].permute(1,2,0).cpu().detach().numpy()
+                    currentflow = currentflow[paddervalues[2]:currentflow.shape[0]-paddervalues[3], paddervalues[0]:currentflow.shape[1]-paddervalues[1],:]
+
+                    flowimg = flow_to_image(currentflow, args.clippercentage)
+
+                    # Save optical flow 
+                    # outputname = str(video_id.stem)[:-2].lower() + f'{framecounter:010}' # TO MATCH GTEA FRAMES NAMES 
+                    outputname = str(video_id.stem) + f'_{framecounter}' # TO MATCH SURGERY VIDEO FRAMES NAMES 
+                    ## Save optical flow Numpy array 
+                    outputnpy = output_folder / (outputname + '.npy')
+                    np.save(outputnpy, currentflow)
+                    logging.info(f'Saved to {outputnpy}')
+
+                    ## Save optical flow color coded RGB image 
+                    if args.saveRGB and args.framestep == 1: 
+                        outputimg = output_folder / 'RGB' / (outputname + '.jpg')
+                        cv.imwrite(str(outputimg), flowimg)
+                        logging.info(f'Saved to {outputimg}')
+
+                    ## Save optical flow in a video 
+                    if args.savevideo: 
+                        output.write(flowimg)
+
+                    # Set new currentframe 
+                    beforeframe = currentframe
+                    framecounter += 1 
+                    while framecounter % args.framestep != firstframenb: 
+                        ret, currentframeimg = cap.read()
+                        framecounter += 1 
+                    ret, currentframeimg = cap.read()
+            
+                cap.release()
+            if args.savevideo and args.framestep == 1: 
                 output.release() 
                 logging.info(f'Video of optical flow saved to {outputvideo}')
 

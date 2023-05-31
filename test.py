@@ -87,7 +87,7 @@ def test_net(net,
     if len(img_ids) == 0: 
         ids = [file.stem for file in images_dir.iterdir() if file.is_file() and file.name != '.gitkeep']
     else: 
-        ids = imgs_ids 
+        ids = img_ids 
     attmapdirForTest = '' if attmaps_dir == None else attmaps_dir
     flowdirForTest = '' if flows_dir == None else flows_dir
     test_set = MasterDataset(images_dir=images_dir, masks_dir=masks_dir, file_ids=ids, scale=img_scale, attmaps_dir=attmapdirForTest, withatt=useatt, flo_dir=flowdirForTest, withflo=useflow, grayscale=rgbtogs) 

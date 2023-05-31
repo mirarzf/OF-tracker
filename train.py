@@ -379,7 +379,7 @@ def train_net(net,
             'train loss epoch avg': epoch_loss, 
         })
     
-    return best_ckpt, best_model_state
+    return best_ckpt, best_model_state, val_ids
 
 def get_args():
     parser = argparse.ArgumentParser(description='Train the UNet on images and target masks')
@@ -451,7 +451,7 @@ if __name__ == '__main__':
     net.to(device=device)
     # TRAINING SECTION 
     try:
-        best_ckpt, best_model_state = train_net(
+        best_ckpt, best_model_state, img_ids = train_net(
             net=net,
             epochs=args.epochs,
             batch_size=args.batch_size,
@@ -495,6 +495,7 @@ if __name__ == '__main__':
         masks_dir=dir_mask_test, 
         attmaps_dir=dir_attmap_test, 
         flows_dir=dir_flow_test, 
+        img_ids=img_ids, 
         img_scale=args.scale,
         mask_threshold=0.5, 
         useatt=args.attention, 

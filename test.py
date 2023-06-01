@@ -177,8 +177,6 @@ def test_net(net,
                 if visualize:
                     plot_img_and_mask_and_gt(image[0].cpu().numpy().transpose((1,2,0))[:,:,:3], mask_true[0].cpu().numpy(), mask_pred[0].cpu().numpy(), net.n_classes) 
 
-    net.train()
-
     # Fixes a potential division by zero error
     if num_val_batches == 0:
         return dice_score

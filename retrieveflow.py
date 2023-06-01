@@ -102,13 +102,13 @@ def retrieveFlow(args):
                 outputvideo = output_folder / 'video' / outputname
                 output = cv.VideoWriter(outputvideo, fourcc, fps, (frame_width_old, frame_height_old))
 
-            for firstframenb in range(0, args.framestep): 
+            for firstframenb in range(1, args.framestep+1): 
                 # Capture the first two frames
                 cap = cv.VideoCapture(origvidpath)
                 ret, beforeframe = cap.read() 
                 # Frame counter for output name 
                 framecounter = firstframenb+1
-                while framecounter % args.framestep != firstframenb: 
+                while framecounter % args.framestep != firstframenb % 5: 
                     ret, currentframeimg = cap.read()
                     framecounter += 1 
                 ret, currentframeimg = cap.read()
@@ -131,26 +131,26 @@ def retrieveFlow(args):
 
                     # Save optical flow 
                     # outputname = str(video_id.stem)[:-2].lower() + f'{framecounter:010}' # TO MATCH GTEA FRAMES NAMES 
-                    outputname = str(video_id.stem) + f'_{framecounter}' # TO MATCH SURGERY VIDEO FRAMES NAMES 
+                    outputname = str(video_id.stem) + f'_{framecounter-args.framestep}' # TO MATCH SURGERY VIDEO FRAMES NAMES 
                     ## Save optical flow Numpy array 
                     outputnpy = output_folder / (outputname + '.npy')
                     np.save(outputnpy, currentflow)
                     logging.info(f'Saved to {outputnpy}')
 
                     ## Save optical flow color coded RGB image 
-                    if args.saveRGB and args.framestep == 1: 
+                    if args.saveRGB: 
                         outputimg = output_folder / 'RGB' / (outputname + '.jpg')
                         cv.imwrite(str(outputimg), flowimg)
                         logging.info(f'Saved to {outputimg}')
 
                     ## Save optical flow in a video 
-                    if args.savevideo: 
+                    if args.savevideo and args.framestep == 1: 
                         output.write(flowimg)
 
                     # Set new currentframe 
                     beforeframe = currentframe
                     framecounter += 1 
-                    while framecounter % args.framestep != firstframenb: 
+                    while framecounter % args.framestep != firstframenb % 5: 
                         ret, currentframeimg = cap.read()
                         framecounter += 1 
                     ret, currentframeimg = cap.read()

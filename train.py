@@ -94,7 +94,7 @@ def train_net(net,
     # dataaugtransform = dict() ################################################### COMMENT IF YOU WANT DATA AUGMENTATION 
 
     # 2. Split into train / validation partitions
-    ids = [file.stem for file in dir_img.iterdir() if file.is_file() and file.name != '.gitkeep']
+    ids = [file.stem for file in dir_img.iterdir() if file.is_file() and str(file.name) != '.gitkeep']
     n_ids = len(ids)
     data_indices = list(range(n_ids))
     np.random.shuffle(data_indices)
@@ -118,15 +118,21 @@ def train_net(net,
         train_ids = ids 
         val_ids = [] 
     ### SELECT IDs FOR SEQUENCE TRAINING ### 
-    banned_id = "0838_0917"
-    train_ids = [id for id in ids if banned_id not in id]
-    val_ids = [id for id in ids if banned_id in id]
-    train_ids = [ids[i] for i in data_indices if banned_id not in ids[i]]
+    test_id = "0838_0917"
+    val_ids = []
+    train_ids = []
+    for id in ids: 
+        if test_id in id: 
+            val_ids.append(id)
+        else: 
+            train_ids.append(id)
     ### END OF SELECT IDs FOR SEQUENCE TRAINING ###
     # ### SELECT IDs FOR VIDEO SPLIT ### 
-    # val_ids = [id for id in ids if banned_id not in id]
-    # train_ids = [id for id in ids if banned_id in id]
-    # train_ids = [ids[i] for i in data_indices if banned_id in ids[i]]
+    # test_id_list = ["0838_0917"]
+    # val_ids = []
+    # for test_id in test_id_list: 
+    #     val_ids += [id for id in ids if test_id not in id]
+    # train_ids = [id for id in ids if id not in val_ids]
     # ### END OF SELECT IDs FOR VIDEO SPLIT ### 
     # ### SELECT IDs FOR HAND PICKED VALIDATION SET ### 
     # val_ids = ["0838_0917_extract_10", 

@@ -152,7 +152,6 @@ def train_net(net,
     n_train = len(train_ids)
     n_val = len(val_ids)
     val_percent = round(n_val/n_train,2) 
-    logging.info(f'''Validation dataset contains following ids: {val_ids}''')
 
     # 3. Create datasets
     train_set = MasterDataset(images_dir=dir_img, masks_dir=dir_mask, file_ids=train_ids, scale=img_scale, transform=dataaugtransform, attmaps_dir=dir_attmap, withatt=useatt, flo_dir=dir_flo, withflo=useflow, grayscale=rgbtogs) 
@@ -200,6 +199,7 @@ def train_net(net,
         Images scaling:  {img_scale}
         Mixed Precision: {amp}
     ''')
+    logging.info(f'''Validation dataset contains following ids: {val_ids}''')
     # For image logging for wandb 
     lastimgchannel = 3
     if rgbtogs: 
@@ -459,6 +459,7 @@ if __name__ == '__main__':
     net.to(device=device)
     # TRAINING SECTION 
     try:
+        logging.info(f'Testing dataset contains following ids : {img_ids}')
         best_ckpt, best_model_state, img_ids = train_net(
             net=net,
             epochs=args.epochs,

@@ -459,7 +459,6 @@ if __name__ == '__main__':
     net.to(device=device)
     # TRAINING SECTION 
     try:
-        logging.info(f'Testing dataset contains following ids : {img_ids}')
         best_ckpt, best_model_state, img_ids = train_net(
             net=net,
             epochs=args.epochs,
@@ -486,6 +485,7 @@ if __name__ == '__main__':
 
     # TESTING SECTION     
     if args.test: 
+        logging.info(f'Testing dataset contains following ids : {img_ids}')
         # Change here to adapt to your data
         # n_channels=3 for RGB images
         # n_classes is the number of probabilities you want to get per pixel

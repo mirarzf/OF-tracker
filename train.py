@@ -128,8 +128,8 @@ def train_net(net,
     #         train_ids.append(id)
     # ### END OF SELECT IDs FOR SEQUENCE TRAINING ###
     ### SELECT IDs FOR VIDEO SPLIT ### 
-    test_id_list = ["0838_0917", "2108_2112", "5909_5915"]
-    # test_id_list = ["green0410_0452", "green0810_0840"]
+    # test_id_list = ["0838_0917", "2108_2112", "5909_5915"]
+    test_id_list = ["green0410_0452", "green0810_0840"]
     val_ids = []
     for test_id in test_id_list: 
         val_ids += [id for id in ids if test_id in id]

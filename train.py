@@ -132,7 +132,7 @@ def train_net(net,
     # test_id_list = ["green0410_0452", "green0810_0840"]
     val_ids = []
     for test_id in test_id_list: 
-        val_ids += [id for id in ids if test_id not in id]
+        val_ids += [id for id in ids if test_id in id]
     train_ids = [id for id in ids if id not in val_ids]
     ### END OF SELECT IDs FOR VIDEO SPLIT ### 
     # ### SELECT IDs FOR HAND PICKED VALIDATION SET ### 

@@ -117,24 +117,24 @@ def train_net(net,
     else: 
         train_ids = ids 
         val_ids = [] 
-    ### SELECT IDs FOR SEQUENCE TRAINING ### 
-    test_id = "green0810_0840"
-    val_ids = []
-    train_ids = []
-    for id in ids: 
-        if test_id in id: 
-            val_ids.append(id)
-        else: 
-            train_ids.append(id)
-    ### END OF SELECT IDs FOR SEQUENCE TRAINING ###
-    # ### SELECT IDs FOR VIDEO SPLIT ### 
-    # test_id_list = ["0838_0917", "2108_2112", "5909_5915"]
-    # # test_id_list = ["green0410_0452", "green0810_0840"]
+    # ### SELECT IDs FOR SEQUENCE TRAINING ### 
+    # test_id = "green0810_0840"
     # val_ids = []
-    # for test_id in test_id_list: 
-    #     val_ids += [id for id in ids if test_id not in id]
-    # train_ids = [id for id in ids if id not in val_ids]
-    # ### END OF SELECT IDs FOR VIDEO SPLIT ### 
+    # train_ids = []
+    # for id in ids: 
+    #     if test_id in id: 
+    #         val_ids.append(id)
+    #     else: 
+    #         train_ids.append(id)
+    # ### END OF SELECT IDs FOR SEQUENCE TRAINING ###
+    ### SELECT IDs FOR VIDEO SPLIT ### 
+    test_id_list = ["0838_0917", "2108_2112", "5909_5915"]
+    # test_id_list = ["green0410_0452", "green0810_0840"]
+    val_ids = []
+    for test_id in test_id_list: 
+        val_ids += [id for id in ids if test_id not in id]
+    train_ids = [id for id in ids if id not in val_ids]
+    ### END OF SELECT IDs FOR VIDEO SPLIT ### 
     # ### SELECT IDs FOR HAND PICKED VALIDATION SET ### 
     # val_ids = ["0838_0917_extract_10", 
     #          "0838_0917_extract_100", 

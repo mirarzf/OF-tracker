@@ -16,6 +16,8 @@ checkpoints/
 
 venv/
 
+.conda/ 
+
 .idea/
 
 # Avoid the virtual environment setup for now 

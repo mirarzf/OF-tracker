@@ -1,27 +1,40 @@
 import numpy as np 
 from pathlib import Path
+import cv2 as cv
+import matplotlib.pyplot as plt 
+import sys
+sys.path.append("..")
+from segment_anything import sam_model_registry, SamAutomaticMaskGenerator, SamPredictor
 
+def show_anns(anns):
+    if len(anns) == 0:
+        return
+    sorted_anns = sorted(anns, key=(lambda x: x['area']), reverse=True)
+    ax = plt.gca()
+    ax.set_autoscale_on(False)
 
-# REPRODUCIBILITY 
-import random
-def set_seed(seed: int = 42) -> None:
-    np.random.seed(seed)
-    random.seed(seed)
-    print(f"Random seed set as {seed}. \n")
-# END REPRODUCIBILLITY 
-set_seed(0)
+    img = np.ones((sorted_anns[0]['segmentation'].shape[0], sorted_anns[0]['segmentation'].shape[1], 4))
+    img[:,:,3] = 0
+    for ann in sorted_anns:
+        m = ann['segmentation']
+        color_mask = np.concatenate([np.random.random(3), [0.35]])
+        img[m] = color_mask
+    ax.imshow(img)
 
-flow_array = np.load(Path('./results/flows/KU/0838_0917_extract_5.npy'))
+sam_checkpoint = "checkpoints\SAM\sam_vit_h_4b8939.pth"
+model_type = "vit_h"
 
-# print(flow_array[:5,:5])
-# print(np.min(flow_array), np.max(flow_array))
-# flox = flow_array[:,:,0]
-# floy = flow_array[:,:,1]
-# norms = 2*np.sqrt(flox**2+floy**2)
-# norms = norms[:,:,np.newaxis]
-# norms = np.concatenate((norms, norms), axis=2)
-# result = flow_array/norms+np.ones(norms.shape)/2
-# print(np.min(result[0]), np.max(result[0]))
-# print(np.min(result[1]), np.max(result[1]))
+device = "cuda"
 
-print(flow_array.shape)
+sam = sam_model_registry[model_type](checkpoint=sam_checkpoint)
+sam.to(device=device)
+
+mask_generator = SamAutomaticMaskGenerator(sam)
+filepath = Path(".\\data\\test\\imgs\\green0810_0840_extract_500.png")
+image = cv.imread(str(filepath))
+masks = mask_generator.generate(image)
+plt.figure(figsize=(20,20))
+plt.imshow(image)
+show_anns(masks)
+plt.axis('off')
+plt.show() 

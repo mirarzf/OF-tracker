@@ -35,6 +35,7 @@ os.environ['KMP_DUPLICATE_LIB_OK']='True'
 # imgdir = Path('D:\\Master Thesis\\data\\KU\\train')
 # imgdir = Path('D:\\Master Thesis\\data\\KU\\test')
 imgdir = Path("./data/test/imgs")
+imgdir = Path("./data/test/imgs-randomsplit")
 imgfilenames = [f for f in imgdir.glob('*.png') if f.is_file()] 
 
 ## Ground truth masks 

@@ -85,6 +85,7 @@ def train_net(net,
     geotransform = A.Compose([ 
         A.HorizontalFlip(p=0.5)
     ], 
+    is_check_shapes=False, 
     additional_targets={'attmap':'mask', 'flox':'mask', 'floy':'mask'})
     colortransform = A.Compose([ 
         A.RandomBrightnessContrast(p=0.5)

@@ -30,11 +30,15 @@ sam = sam_model_registry[model_type](checkpoint=sam_checkpoint)
 sam.to(device=device)
 
 mask_generator = SamAutomaticMaskGenerator(sam)
-filepath = Path(".\\data\\test\\imgs\\green0810_0840_extract_500.png")
-image = cv.imread(str(filepath))
-masks = mask_generator.generate(image)
-plt.figure(figsize=(20,20))
-plt.imshow(image)
-show_anns(masks)
-plt.axis('off')
-plt.show() 
+folder = Path(".\\data\\test\\imgs")
+compteur = 0 
+for filepath in folder.iterdir(): 
+    if filepath.is_file() and compteur < 5 and filepath.stem != ".gitkeep": 
+        image = cv.imread(str(filepath))
+        masks = mask_generator.generate(image)
+        plt.figure(figsize=(20,20))
+        plt.imshow(image)
+        show_anns(masks)
+        plt.axis('off')
+        plt.show() 
+        compteur += 1 

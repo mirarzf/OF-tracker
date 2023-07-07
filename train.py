@@ -91,7 +91,8 @@ def train_net(net,
     is_check_shapes=False, 
     additional_targets={'attmap':'mask', 'flox':'mask', 'floy':'mask'})
     colortransform = A.Compose([ 
-        A.RandomBrightnessContrast(p=0.5)
+        A.RandomBrightnessContrast(p=0.5), 
+        A.ChannelShuffle(p=0.5)
     ])
     dataaugtransform = {'geometric': geotransform, 
                         'color': colortransform}

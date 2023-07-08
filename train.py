@@ -52,7 +52,7 @@ dir_mask = Path('./data/test/masks/')
 dir_attmap = Path('./data/attmaps/')
 
 dir_flo = Path('./data/flows/')
-# dir_flo = Path('./data/test/flows/')
+dir_flo = Path('./data/test/flows/')
 
 ## FOR TESTING 
 dir_img_test = Path('./data/test/imgs/')

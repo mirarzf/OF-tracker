@@ -122,16 +122,16 @@ def train_net(net,
     else: 
         train_ids = ids 
         val_ids = [] 
-    # ### SELECT IDs FOR SEQUENCE TRAINING ### 
-    # test_id = "0838_0917"
-    # val_ids = []
-    # train_ids = []
-    # for id in ids: 
-    #     if test_id in id: 
-    #         val_ids.append(id)
-    #     else: 
-    #         train_ids.append(id)
-    # ### END OF SELECT IDs FOR SEQUENCE TRAINING ###
+    ### SELECT IDs FOR SEQUENCE TRAINING ### 
+    test_id = "0838_0917"
+    val_ids = []
+    train_ids = []
+    for id in ids: 
+        if test_id in id: 
+            val_ids.append(id)
+        else: 
+            train_ids.append(id)
+    ### END OF SELECT IDs FOR SEQUENCE TRAINING ###
     # ### SELECT IDs FOR VIDEO SPLIT ### 
     # test_id_list = ["0838_0917", "2108_2112", "5909_5915"]
     # # test_id_list = ["green0410_0452", "green0810_0840"]

@@ -122,7 +122,7 @@ def test_net(net,
                  "green0810_0840_extract_100"]
         ids = []
         for test_id in test_id_list: 
-            ids += [id for id in all_ids if test_id in id]
+            ids += [id for id in all_ids if test_id == id]
         ### END OF SELECT IDs FOR HAND PICKED VALIDATION SET ### 
     else: 
         ids = img_ids 

@@ -91,8 +91,8 @@ def test_net(net,
         ids = [file.stem for file in images_dir.iterdir() if file.is_file() and file.name != '.gitkeep']
         ### SELECT IDs FOR SEQUENCE TRAINING ### 
         all_ids = [file.stem for file in images_dir.iterdir() if file.is_file() and file.name != '.gitkeep']
-        test_id = "0838_0917"
-        # test_id = "2108_2112"
+        # test_id = "0838_0917"
+        test_id = "2108_2112"
         # test_id = "5909_5915"
         # test_id = "green0410_0452"
         # test_id = "green0810_0840"

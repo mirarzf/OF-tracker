@@ -38,13 +38,13 @@ def set_seed(seed: int = 42) -> None:
 # DATA DIRECTORIES 
 ## FOR TRAINING 
 dir_img = Path('./data/imgs/')
-# dir_img = Path('./data/test/imgs/')
+dir_img = Path('./data/test/imgs/')
 # dir_img = Path('D:\\Master Thesis\\data\\KU\\train')
 # dir_img = Path('D:\\Master Thesis\\data\\GTEA\\GTEA\\train')
 # dir_img = Path('D:\\Master Thesis\\data\\EgoHOS\\train\\image')
 
 dir_mask = Path('./data/masks/')
-# dir_mask = Path('./data/test/masks/')
+dir_mask = Path('./data/test/masks/')
 # dir_mask = Path('D:\\Master Thesis\\data\\KU\\trainannot')
 # dir_mask = Path('D:\\Master Thesis\\data\\GTEA\\GTEA\\trainannot')
 # dir_mask = Path('D:\\Master Thesis\\data\\EgoHOS\\train\\label')
@@ -52,7 +52,7 @@ dir_mask = Path('./data/masks/')
 dir_attmap = Path('./data/attmaps/')
 
 dir_flo = Path('./data/flows/')
-# dir_flo = Path('./data/test/flows/')
+dir_flo = Path('./data/test/flows/')
 
 ## FOR TESTING 
 dir_img_test = Path('./data/test/imgs/')
@@ -91,7 +91,8 @@ def train_net(net,
     is_check_shapes=False, 
     additional_targets={'attmap':'mask', 'flox':'mask', 'floy':'mask'})
     colortransform = A.Compose([ 
-        A.RandomBrightnessContrast(p=0.5)
+        A.RandomBrightnessContrast(p=0.5), 
+        A.ChannelShuffle(p=0.5)
     ])
     dataaugtransform = {'geometric': geotransform, 
                         'color': colortransform}
@@ -121,16 +122,20 @@ def train_net(net,
     else: 
         train_ids = ids 
         val_ids = [] 
-    # ### SELECT IDs FOR SEQUENCE TRAINING ### 
+    ### SELECT IDs FOR SEQUENCE TRAINING ### 
     # test_id = "0838_0917"
-    # val_ids = []
-    # train_ids = []
-    # for id in ids: 
-    #     if test_id in id: 
-    #         val_ids.append(id)
-    #     else: 
-    #         train_ids.append(id)
-    # ### END OF SELECT IDs FOR SEQUENCE TRAINING ###
+    # test_id = "2108_2112"
+    # test_id = "5909_5915"
+    test_id = "green0410_0452"
+    # test_id = "green0810_0840"
+    val_ids = []
+    train_ids = []
+    for id in ids: 
+        if test_id in id: 
+            val_ids.append(id)
+        else: 
+            train_ids.append(id)
+    ### END OF SELECT IDs FOR SEQUENCE TRAINING ###
     # ### SELECT IDs FOR VIDEO SPLIT ### 
     # test_id_list = ["0838_0917", "2108_2112", "5909_5915"]
     # # test_id_list = ["green0410_0452", "green0810_0840"]

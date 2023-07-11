@@ -100,8 +100,8 @@ def test_net(net,
         # ### END OF SELECT IDs FOR SEQUENCE TRAINING ###
         ### SELECT IDs FOR VIDEO SPLIT ### 
         all_ids = [file.stem for file in images_dir.iterdir() if file.is_file() and file.name != '.gitkeep']
-        test_id_list = ["0838_0917", "2108_2112", "5909_5915"]
-        # test_id_list = ["green0410_0452", "green0810_0840"]
+        # test_id_list = ["0838_0917", "2108_2112", "5909_5915"]
+        test_id_list = ["green0410_0452", "green0810_0840"]
         ids = []
         for test_id in test_id_list: 
             ids += [id for id in all_ids if test_id in id]

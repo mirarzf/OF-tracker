@@ -125,8 +125,8 @@ def train_net(net,
     ### SELECT IDs FOR SEQUENCE TRAINING ### 
     # test_id = "0838_0917"
     # test_id = "2108_2112"
-    test_id = "5909_5915"
-    # test_id = "green0410_0452"
+    # test_id = "5909_5915"
+    test_id = "green0410_0452"
     # test_id = "green0810_0840"
     val_ids = []
     train_ids = []

@@ -94,8 +94,8 @@ def test_net(net,
         # test_id = "0838_0917"
         # test_id = "2108_2112"
         # test_id = "5909_5915"
-        test_id = "green0410_0452"
-        # test_id = "green0810_0840"
+        # test_id = "green0410_0452"
+        test_id = "green0810_0840"
         ids = [id for id in all_ids if test_id in id]
         ### END OF SELECT IDs FOR SEQUENCE TRAINING ###
         # ### SELECT IDs FOR VIDEO SPLIT ### 

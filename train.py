@@ -38,13 +38,13 @@ def set_seed(seed: int = 42) -> None:
 # DATA DIRECTORIES 
 ## FOR TRAINING 
 dir_img = Path('./data/imgs/')
-dir_img = Path('./data/test/imgs/')
+# dir_img = Path('./data/test/imgs/')
 # dir_img = Path('D:\\Master Thesis\\data\\KU\\train')
 # dir_img = Path('D:\\Master Thesis\\data\\GTEA\\GTEA\\train')
 # dir_img = Path('D:\\Master Thesis\\data\\EgoHOS\\train\\image')
 
 dir_mask = Path('./data/masks/')
-dir_mask = Path('./data/test/masks/')
+# dir_mask = Path('./data/test/masks/')
 # dir_mask = Path('D:\\Master Thesis\\data\\KU\\trainannot')
 # dir_mask = Path('D:\\Master Thesis\\data\\GTEA\\GTEA\\trainannot')
 # dir_mask = Path('D:\\Master Thesis\\data\\EgoHOS\\train\\label')
@@ -52,7 +52,7 @@ dir_mask = Path('./data/test/masks/')
 dir_attmap = Path('./data/attmaps/')
 
 dir_flo = Path('./data/flows/')
-dir_flo = Path('./data/test/flows/')
+# dir_flo = Path('./data/test/flows/')
 
 ## FOR TESTING 
 dir_img_test = Path('./data/test/imgs/')
@@ -96,7 +96,7 @@ def train_net(net,
     ])
     dataaugtransform = {'geometric': geotransform, 
                         'color': colortransform}
-    # dataaugtransform = dict() ################################################### COMMENT IF YOU WANT DATA AUGMENTATION 
+    dataaugtransform = dict() ################################################### COMMENT IF YOU WANT DATA AUGMENTATION 
 
     # 2. Split into train / validation partitions
     ids = [file.stem for file in dir_img.iterdir() if file.is_file() and str(file.name) != '.gitkeep']
@@ -122,20 +122,20 @@ def train_net(net,
     else: 
         train_ids = ids 
         val_ids = [] 
-    ### SELECT IDs FOR SEQUENCE TRAINING ### 
-    test_id = "0838_0917"
-    # test_id = "2108_2112"
-    # test_id = "5909_5915"
-    # test_id = "green0410_0452"
-    # test_id = "green0810_0840"
-    val_ids = []
-    train_ids = []
-    for id in ids: 
-        if test_id in id: 
-            val_ids.append(id)
-        else: 
-            train_ids.append(id)
-    ### END OF SELECT IDs FOR SEQUENCE TRAINING ###
+    # ### SELECT IDs FOR SEQUENCE TRAINING ### 
+    # test_id = "0838_0917"
+    # # test_id = "2108_2112"
+    # # test_id = "5909_5915"
+    # # test_id = "green0410_0452"
+    # # test_id = "green0810_0840"
+    # val_ids = []
+    # train_ids = []
+    # for id in ids: 
+    #     if test_id in id: 
+    #         val_ids.append(id)
+    #     else: 
+    #         train_ids.append(id)
+    # ### END OF SELECT IDs FOR SEQUENCE TRAINING ###
     # ### SELECT IDs FOR VIDEO SPLIT ### 
     # # test_id_list = ["0838_0917", "2108_2112", "5909_5915"]
     # test_id_list = ["green0410_0452", "green0810_0840"]
@@ -176,7 +176,8 @@ def train_net(net,
 
     # (Initialize logging)
     # project_name = "OF-Tracker-final" # For final wandb project 
-    project_name = "OF-Tracker-TBDeleted" # "OF-Tracker-final" # For final wandb project 
+    # project_name = "OF-Tracker-TBDeleted" # "OF-Tracker-final" # For final wandb project 
+    project_name = "Endosono-Segmentation" # 
     experiment = wandb.init(project=project_name, resume='allow', anonymous='must')
     experiment.config.update(dict(
         epochs=epochs, 
@@ -233,8 +234,8 @@ def train_net(net,
     # 5. Set up the optimizer, the loss, the learning rate scheduler and the loss scaling for AMP
     # optimizer = optim.RMSprop(net.parameters(), lr=learning_rate, weight_decay=1e-2, momentum=0.9) # VANILLA SETTINGS: net.parameters(), lr=learning_rate, weight_decay=1e-8, momentum=0.9
     optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=0.9)
-    # scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=2)  # goal: maximize Dice score
-    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda curr_epoch: (epochs - curr_epoch) / epochs) 
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=2, factor=0.1)  # goal: maximize Dice score
+    # scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda curr_epoch: (epochs - curr_epoch) / epochs) 
     grad_scaler = torch.cuda.amp.GradScaler(enabled=amp)
     criterion = nn.CrossEntropyLoss() # VANILLA 
     debug_criterion = nn.CrossEntropyLoss(reduction='none') ############## DEBUG CROSS ENTROPY
@@ -333,7 +334,7 @@ def train_net(net,
                     histograms['Gradients/' + tag] = wandb.Histogram(value.grad.data.cpu())
 
             val_score = evaluate(net, val_loader, device, useatt=useatt, addpos=addpositions, addflow=useflow, rgbtogs=rgbtogs, noimg=noimg)
-            # scheduler.step(val_score)
+            scheduler.step(val_score)
             net.train()
 
             logging.info('Validation Dice score: {}'.format(val_score))
@@ -365,7 +366,8 @@ def train_net(net,
             experiment.log(epochlog)
             
         epoch_loss /= len(train_loader)
-        scheduler.step() # Change learning rate 
+        # scheduler.step() # Change learning rate 
+        # scheduler.step(epoch_loss)
 
         # 7. (Optional) Save checkpoint at each epoch 
         if save_checkpoint:            
@@ -514,7 +516,8 @@ if __name__ == '__main__':
         masks_dir=dir_mask_test, 
         attmaps_dir=dir_attmap_test, 
         flows_dir=dir_flow_test, 
-        img_ids=img_ids, 
+        # img_ids=img_ids, 
+        img_ids=[], 
         img_scale=args.scale,
         mask_threshold=0.5, 
         useatt=args.attention, 

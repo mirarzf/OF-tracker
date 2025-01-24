@@ -55,7 +55,8 @@ flowdir = Path("./data/test/flows")
 # flowdir = Path("./data/test/flows-randomsplit")
 
 ## Folder where to save the predicted segmentation masks 
-outdir = Path("./results/unet")
+outdir = Path("./results/")
+# outdir = None 
 
 ## Checkpoint directories 
 dir_checkpoint = Path('./checkpoints')
@@ -84,46 +85,46 @@ def test_net(net,
               addpositions: bool = False, 
               rgbtogs: bool = False, 
               noimg: bool = False, 
-              savepred: bool = True, 
+              savepred: bool = False, 
               visualize: bool = False):
     # 1. Create dataset
     if len(img_ids) == 0: 
         ids = [file.stem for file in images_dir.iterdir() if file.is_file() and file.name != '.gitkeep']
-        ### SELECT IDs FOR SEQUENCE TRAINING ### 
-        all_ids = [file.stem for file in images_dir.iterdir() if file.is_file() and file.name != '.gitkeep']
-        test_id = "0838_0917"
-        # test_id = "2108_2112"
-        # test_id = "5909_5915"
-        # test_id = "green0410_0452"
-        # test_id = "green0810_0840"
-        ids = [id for id in all_ids if test_id in id]
-        ### END OF SELECT IDs FOR SEQUENCE TRAINING ###
-        # ### SELECT IDs FOR VIDEO SPLIT ### 
+        # ### SELECT IDs FOR SEQUENCE TRAINING ### 
         # all_ids = [file.stem for file in images_dir.iterdir() if file.is_file() and file.name != '.gitkeep']
-        # # test_id_list = ["0838_0917", "2108_2112", "5909_5915"]
-        # test_id_list = ["green0410_0452", "green0810_0840"]
-        # ids = []
-        # for test_id in test_id_list: 
-        #     ids += [id for id in all_ids if test_id in id]
-        # ### END OF SELECT IDs FOR VIDEO SPLIT ### 
-        # ### SELECT IDs FOR HAND PICKED VALIDATION SET ### 
-        # all_ids = [file.stem for file in images_dir.iterdir() if file.is_file() and file.name != '.gitkeep']
-        # test_id_list = ["0838_0917_extract_10", 
-        #          "0838_0917_extract_100", 
-        #          "0838_0917_extract_400", 
-        #          "2108_2112_extract_110",
-        #          "5909_5915_extract_10", 
-        #          "5909_5915_extract_70", 
-        #          "5909_5915_extract_140", 
-        #          "green0410_0452_extract_750", 
-        #          "green0410_0452_extract_800", 
-        #          "green0410_0452_extract_1000", 
-        #          "green0810_0840_extract_10", 
-        #          "green0810_0840_extract_100"]
-        # ids = []
-        # for test_id in test_id_list: 
-        #     ids += [id for id in all_ids if test_id == id]
-        # ### END OF SELECT IDs FOR HAND PICKED VALIDATION SET ### 
+        # test_id = "0838_0917"
+        # # test_id = "2108_2112"
+        # # test_id = "5909_5915"
+        # # test_id = "green0410_0452"
+        # # test_id = "green0810_0840"
+        # ids = [id for id in all_ids if test_id in id]
+        # ### END OF SELECT IDs FOR SEQUENCE TRAINING ###
+        # # ### SELECT IDs FOR VIDEO SPLIT ### 
+        # # all_ids = [file.stem for file in images_dir.iterdir() if file.is_file() and file.name != '.gitkeep']
+        # # # test_id_list = ["0838_0917", "2108_2112", "5909_5915"]
+        # # test_id_list = ["green0410_0452", "green0810_0840"]
+        # # ids = []
+        # # for test_id in test_id_list: 
+        # #     ids += [id for id in all_ids if test_id in id]
+        # # ### END OF SELECT IDs FOR VIDEO SPLIT ### 
+        # # ### SELECT IDs FOR HAND PICKED VALIDATION SET ### 
+        # # all_ids = [file.stem for file in images_dir.iterdir() if file.is_file() and file.name != '.gitkeep']
+        # # test_id_list = ["0838_0917_extract_10", 
+        # #          "0838_0917_extract_100", 
+        # #          "0838_0917_extract_400", 
+        # #          "2108_2112_extract_110",
+        # #          "5909_5915_extract_10", 
+        # #          "5909_5915_extract_70", 
+        # #          "5909_5915_extract_140", 
+        # #          "green0410_0452_extract_750", 
+        # #          "green0410_0452_extract_800", 
+        # #          "green0410_0452_extract_1000", 
+        # #          "green0810_0840_extract_10", 
+        # #          "green0810_0840_extract_100"]
+        # # ids = []
+        # # for test_id in test_id_list: 
+        # #     ids += [id for id in all_ids if test_id == id]
+        # # ### END OF SELECT IDs FOR HAND PICKED VALIDATION SET ### 
     else: 
         ids = img_ids 
     attmapdirForTest = '' if attmaps_dir == None else attmaps_dir
